@@ -1,62 +1,30 @@
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis } from 'recharts'
 
-const data = [
-  {
-    name: 'Jan',
-    total: Math.floor(Math.random() * 5000) + 1000,
-  },
-  {
-    name: 'Feb',
-    total: Math.floor(Math.random() * 5000) + 1000,
-  },
-  {
-    name: 'Mar',
-    total: Math.floor(Math.random() * 5000) + 1000,
-  },
-  {
-    name: 'Apr',
-    total: Math.floor(Math.random() * 5000) + 1000,
-  },
-  {
-    name: 'May',
-    total: Math.floor(Math.random() * 5000) + 1000,
-  },
-  {
-    name: 'Jun',
-    total: Math.floor(Math.random() * 5000) + 1000,
-  },
-  {
-    name: 'Jul',
-    total: Math.floor(Math.random() * 5000) + 1000,
-  },
-  {
-    name: 'Aug',
-    total: Math.floor(Math.random() * 5000) + 1000,
-  },
-  {
-    name: 'Sep',
-    total: Math.floor(Math.random() * 5000) + 1000,
-  },
-  {
-    name: 'Oct',
-    total: Math.floor(Math.random() * 5000) + 1000,
-  },
-  {
-    name: 'Nov',
-    total: Math.floor(Math.random() * 5000) + 1000,
-  },
-  {
-    name: 'Dec',
-    total: Math.floor(Math.random() * 5000) + 1000,
-  },
-]
+interface OverviewProps {
+  monthlyRevenue: { month: string; revenue: number }[]
+}
 
-export function Overview() {
+export function Overview({ monthlyRevenue }: OverviewProps) {
+  const data = monthlyRevenue.length > 0 ? monthlyRevenue : [
+    { month: 'jan', revenue: 0 },
+    { month: 'feb', revenue: 0 },
+    { month: 'mar', revenue: 0 },
+    { month: 'apr', revenue: 0 },
+    { month: 'may', revenue: 0 },
+    { month: 'jun', revenue: 0 },
+    { month: 'jul', revenue: 0 },
+    { month: 'aug', revenue: 0 },
+    { month: 'sep', revenue: 0 },
+    { month: 'oct', revenue: 0 },
+    { month: 'nov', revenue: 0 },
+    { month: 'dec', revenue: 0 },
+  ]
+
   return (
     <ResponsiveContainer width='100%' height={350}>
       <BarChart data={data}>
         <XAxis
-          dataKey='name'
+          dataKey='month'
           stroke='#888888'
           fontSize={12}
           tickLine={false}
@@ -68,10 +36,10 @@ export function Overview() {
           fontSize={12}
           tickLine={false}
           axisLine={false}
-          tickFormatter={(value) => `$${value}`}
+          tickFormatter={(value) => `د.ع ${value}`}
         />
         <Bar
-          dataKey='total'
+          dataKey='revenue'
           fill='currentColor'
           radius={[4, 4, 0, 0]}
           className='fill-primary'

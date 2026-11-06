@@ -10,6 +10,7 @@ export interface PublicMenuItem {
   description_ar: string | null
   price: number
   image_path: string | null
+  is_available: boolean
 }
 
 export interface PublicMenuCategory {
@@ -151,7 +152,6 @@ export function usePublicMenu(restaurantSlug: string) {
             is_available: boolean
             sort_order: number
           })[])
-            .filter((item) => item.is_available)
             .sort((a, b) => a.sort_order - b.sort_order),
         })
       )

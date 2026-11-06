@@ -144,7 +144,7 @@ export function MenuPreview({
                 {item.name}
               </p>
               <p className='text-[11px] font-semibold' style={{ color: accentColor }}>
-                {item.price} ر.س
+                {item.price} د.ع
               </p>
             </div>
           </div>

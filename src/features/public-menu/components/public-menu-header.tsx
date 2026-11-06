@@ -1,4 +1,5 @@
-import { UtensilsCrossed } from 'lucide-react'
+import { ShoppingCart, UtensilsCrossed } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import { getMenuImageUrl } from '@/lib/supabase'
 import type { MenuTemplate } from '../templates/types'
 import type { PublicBranding, PublicRestaurant } from '../api'
@@ -8,6 +9,8 @@ interface PublicMenuHeaderProps {
   branding: PublicBranding | null
   template: MenuTemplate
   primaryColor: string
+  cartCount: number
+  onCartToggle: () => void
 }
 
 export function PublicMenuHeader({
@@ -15,6 +18,8 @@ export function PublicMenuHeader({
   branding,
   template,
   primaryColor,
+  cartCount,
+  onCartToggle,
 }: PublicMenuHeaderProps) {
   const logoUrl = getMenuImageUrl(branding?.logo_path)
   const restaurantName = restaurant.name_ar ?? restaurant.name
@@ -22,11 +27,22 @@ export function PublicMenuHeader({
   // منيمال: بدون شريط ملوّن، اسم المطعم فقط أعلى الصفحة بخط كبير
   if (template.headerStyle === 'minimal') {
     return (
-      <div className='flex items-center gap-3 px-4 pt-6 pb-3'>
-        {logoUrl && (
-          <img src={logoUrl} alt={restaurantName} className='size-10 rounded-full object-cover' />
-        )}
-        <h1 className='text-xl font-bold'>{restaurantName}</h1>
+      <div className='flex items-center justify-between gap-3 px-4 pt-6 pb-3'>
+        <div className='flex items-center gap-3'>
+          {logoUrl && (
+            <img src={logoUrl} alt={restaurantName} className='size-10 rounded-full object-cover' />
+          )}
+          <h1 className='text-xl font-bold'>{restaurantName}</h1>
+        </div>
+        <Button
+          type='button'
+          size='sm'
+          variant='outline'
+          onClick={onCartToggle}
+        >
+          <ShoppingCart className='size-4 mr-1' />
+          سلة ({cartCount})
+        </Button>
       </div>
     )
   }
@@ -53,6 +69,12 @@ export function PublicMenuHeader({
             <span className='h-px w-8' style={{ backgroundColor: primaryColor }} />
           </div>
         )}
+        <div className='mt-4 flex justify-center'>
+          <Button type='button' size='sm' variant='outline' onClick={onCartToggle}>
+            <ShoppingCart className='size-4 mr-1' />
+            سلة ({cartCount})
+          </Button>
+        </div>
       </div>
     )
   }
@@ -62,16 +84,22 @@ export function PublicMenuHeader({
     return (
       <div className='flex items-center justify-between border-b px-4 py-4'>
         <h1 className='text-xl font-bold'>{restaurantName}</h1>
-        {logoUrl ? (
-          <img src={logoUrl} alt={restaurantName} className='size-11 rounded-full object-cover' />
-        ) : (
-          <div
-            className='flex size-11 items-center justify-center rounded-full'
-            style={{ backgroundColor: primaryColor, color: '#fff' }}
-          >
-            <UtensilsCrossed className='size-5' />
-          </div>
-        )}
+        <div className='flex items-center gap-2'>
+          {logoUrl ? (
+            <img src={logoUrl} alt={restaurantName} className='size-11 rounded-full object-cover' />
+          ) : (
+            <div
+              className='flex size-11 items-center justify-center rounded-full'
+              style={{ backgroundColor: primaryColor, color: '#fff' }}
+            >
+              <UtensilsCrossed className='size-5' />
+            </div>
+          )}
+          <Button type='button' size='sm' variant='outline' onClick={onCartToggle}>
+            <ShoppingCart className='size-4 mr-1' />
+            سلة ({cartCount})
+          </Button>
+        </div>
       </div>
     )
   }
@@ -101,24 +129,42 @@ export function PublicMenuHeader({
           </div>
         )}
         <h1 className='text-2xl font-bold tracking-wide'>{restaurantName}</h1>
+        <div className='mt-4 flex justify-center'>
+          <Button type='button' size='sm' variant='outline' onClick={onCartToggle}>
+            <ShoppingCart className='size-4 mr-1' />
+            سلة ({cartCount})
+          </Button>
+        </div>
       </div>
     )
   }
 
   // البانر الافتراضي: شريط ملوّن بلون المطعم الأساسي
   return (
-    <div className='flex items-center gap-3 px-4 py-5' style={{ backgroundColor: primaryColor }}>
-      {logoUrl ? (
-        <img src={logoUrl} alt={restaurantName} className='size-12 rounded-full border-2 border-white/40 object-cover' />
-      ) : (
-        <div className='flex size-12 items-center justify-center rounded-full bg-white/20 text-white'>
-          <UtensilsCrossed className='size-6' />
+    <div className='flex items-center justify-between border-b px-4 py-4' style={{ backgroundColor: primaryColor }}>
+      <div className='flex items-center gap-3'>
+        {logoUrl ? (
+          <img src={logoUrl} alt={restaurantName} className='size-12 rounded-full border-2 border-white/40 object-cover' />
+        ) : (
+          <div className='flex size-12 items-center justify-center rounded-full bg-white/20 text-white'>
+            <UtensilsCrossed className='size-6' />
+          </div>
+        )}
+        <div>
+          <h1 className='text-lg font-bold text-white'>{restaurantName}</h1>
+          <p className='text-xs text-white/80'>امسح، تصفح، واطلب</p>
         </div>
-      )}
-      <div>
-        <h1 className='text-lg font-bold text-white'>{restaurantName}</h1>
-        <p className='text-xs text-white/80'>امسح، تصفح، واطلب</p>
       </div>
+      <Button
+        type='button'
+        size='sm'
+        variant='outline'
+        className='text-white border-white/40 hover:bg-white/20'
+        onClick={onCartToggle}
+      >
+        <ShoppingCart className='size-4 mr-1' />
+        سلة ({cartCount})
+      </Button>
     </div>
   )
 }

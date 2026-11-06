@@ -2,11 +2,13 @@ import { useEffect, useMemo, useState } from 'react'
 import { Loader2, SearchX } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { usePublicMenu, type PublicMenuItem } from './api'
+import { useCartStore } from '@/stores/cart-store'
 import { PublicMenuHeader } from './components/public-menu-header'
 import { CategoryTabsBar } from './components/category-tabs-bar'
 import { ItemCard } from './components/item-card'
 import { ItemDetailsSheet } from './components/item-details-sheet'
 import { PromoBanner } from './components/promo-banner'
+import { CartSheet } from './components/cart-sheet'
 import { getMenuTemplate } from './templates/registry'
 
 interface PublicMenuProps {
@@ -17,6 +19,9 @@ export function PublicMenu({ restaurantSlug }: PublicMenuProps) {
   const { data, isLoading, isError } = usePublicMenu(restaurantSlug)
   const [activeCategoryId, setActiveCategoryId] = useState<string>('')
   const [selectedItem, setSelectedItem] = useState<PublicMenuItem | null>(null)
+  const [cartOpen, setCartOpen] = useState(false)
+  const { items } = useCartStore()
+  const cartCount = items.reduce((acc, item) => acc + item.quantity, 0)
 
   const template = getMenuTemplate(data?.branding?.menu_style)
 
@@ -88,6 +93,8 @@ export function PublicMenu({ restaurantSlug }: PublicMenuProps) {
         branding={data.branding}
         template={template}
         primaryColor={primaryColor}
+        cartCount={cartCount}
+        onCartToggle={() => setCartOpen((open) => !open)}
       />
 
       <PromoBanner offers={data.orderOffers} accentColor={accentColor} />
@@ -115,10 +122,7 @@ export function PublicMenu({ restaurantSlug }: PublicMenuProps) {
                 className='scroll-mt-20'
               >
                 <h2
-                  className={cn(
-                    'mb-3 text-base font-bold',
-                    template.ornamented && 'flex items-center gap-2'
-                  )}
+                  className={cn(template.ornamented && 'flex items-center gap-2')}
                 >
                   {template.ornamented && (
                     <span className='h-px flex-1 max-w-6' style={{ backgroundColor: accentColor }} />
@@ -137,6 +141,7 @@ export function PublicMenu({ restaurantSlug }: PublicMenuProps) {
                       template={template}
                       animationDelayMs={idx * 70}
                       offer={data.itemOffers[item.id]}
+                      isAvailable={item.is_available}
                       onSelect={() => setSelectedItem(item)}
                     />
                   ))}
@@ -151,7 +156,14 @@ export function PublicMenu({ restaurantSlug }: PublicMenuProps) {
         item={selectedItem}
         accentColor={accentColor}
         offer={selectedItem ? data.itemOffers[selectedItem.id] : undefined}
+        isAvailable={selectedItem?.is_available}
         onOpenChange={(open) => !open && setSelectedItem(null)}
+      />
+
+      <CartSheet
+        open={cartOpen}
+        onOpenChange={setCartOpen}
+        restaurantId={data?.restaurant.id}
       />
     </div>
   )

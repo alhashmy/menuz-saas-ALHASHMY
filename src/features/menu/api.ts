@@ -178,3 +178,26 @@ export function useDeleteMenuItem() {
     },
   })
 }
+
+export function useUpdateSortOrder() {
+  const queryClient = useQueryClient()
+  const restaurantId = useAuthStore((s) => s.restaurant?.id)
+
+  return useMutation({
+    mutationFn: async (updates: { id: string; sort_order: number }[]) => {
+      if (!restaurantId) throw new Error('لا يوجد مطعم مرتبط بالحساب الحالي.')
+      const errors: string[] = []
+      for (const { id, sort_order } of updates) {
+        const { error } = await supabase
+          .from('menu_items')
+          .update({ sort_order })
+          .eq('id', id)
+        if (error) errors.push(error.message)
+      }
+      if (errors.length > 0) throw new Error(errors.join(', '))
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['menu-items', restaurantId] })
+    },
+  })
+}

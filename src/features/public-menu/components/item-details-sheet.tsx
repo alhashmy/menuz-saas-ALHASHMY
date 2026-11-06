@@ -1,4 +1,5 @@
 import { UtensilsCrossed } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import { getMenuImageUrl } from '@/lib/supabase'
 import {
   Sheet,
@@ -9,6 +10,8 @@ import {
 } from '@/components/ui/sheet'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { useCartStore } from '@/stores/cart-store'
+import { toast } from 'sonner'
 import { applyItemOffer, type PublicItemOffer, type PublicMenuItem } from '../api'
 
 interface ItemDetailsSheetProps {
@@ -16,6 +19,7 @@ interface ItemDetailsSheetProps {
   accentColor: string
   offer?: PublicItemOffer
   onOpenChange: (open: boolean) => void
+  isAvailable?: boolean
 }
 
 export function ItemDetailsSheet({
@@ -23,15 +27,31 @@ export function ItemDetailsSheet({
   accentColor,
   offer,
   onOpenChange,
+  isAvailable = true,
 }: ItemDetailsSheetProps) {
   const imageUrl = item ? getMenuImageUrl(item.image_path) : null
   const { finalPrice, hasDiscount } = item
     ? applyItemOffer(item.price, offer)
     : { finalPrice: 0, hasDiscount: false }
+  const addToCart = useCartStore((state) => state.addItem)
+
+  function handleAddToCart() {
+    if (!item || !isAvailable) return
+    addToCart({
+      id: item.id,
+      name: item.name_ar ?? item.name,
+      price: finalPrice,
+      imagePath: item.image_path,
+    })
+    toast('أُضيف إلى السلة', {
+      description: `${item.name_ar ?? item.name}`,
+    })
+    onOpenChange(false)
+  }
 
   return (
     <Sheet open={!!item} onOpenChange={onOpenChange}>
-      <SheetContent side='bottom' className='max-h-[85vh] overflow-y-auto rounded-t-2xl'>
+      <SheetContent side='right' className='max-w-sm w-full h-full bg-background p-0'>
         {item && (
           <>
             <div className='mx-auto mb-2 h-1.5 w-10 rounded-full bg-muted' />
@@ -42,17 +62,22 @@ export function ItemDetailsSheet({
                   خصم{' '}
                   {offer.discount_kind === 'percentage'
                     ? `${offer.discount_value}%`
-                    : `${offer.discount_value} ر.س`}
+                    : `${offer.discount_value} د.ع`}
+                </Badge>
+              )}
+              {!isAvailable && (
+                <Badge className='absolute top-2 left-2 z-10 bg-red-600 text-white'>
+                  غير متوفر
                 </Badge>
               )}
               {imageUrl ? (
                 <img
                   src={imageUrl}
                   alt={item.name_ar ?? item.name}
-                  className='h-48 w-full rounded-xl object-cover'
+                  className={cn('h-48 w-full rounded-xl object-cover', !isAvailable && 'opacity-60 grayscale')}
                 />
               ) : (
-                <div className='flex h-48 w-full items-center justify-center rounded-xl bg-muted text-muted-foreground'>
+                <div className={cn('flex h-48 w-full items-center justify-center rounded-xl bg-muted text-muted-foreground', !isAvailable && 'opacity-60 grayscale')}>
                   <UtensilsCrossed className='size-10' />
                 </div>
               )}
@@ -70,18 +95,23 @@ export function ItemDetailsSheet({
             <div className='mt-6 flex items-center justify-between'>
               <div className='flex items-baseline gap-2'>
                 <span className='text-2xl font-bold' style={{ color: accentColor }}>
-                  {finalPrice.toFixed(2)} ر.س
+                  {finalPrice.toFixed(2)} د.ع
                 </span>
                 {hasDiscount && (
-                  <span className='text-sm text-muted-foreground line-through'>
-                    {item.price.toFixed(2)} ر.س
-                  </span>
+                <span className='text-sm text-muted-foreground line-through'>
+                  {item.price.toFixed(2)} د.ع
+                </span>
                 )}
               </div>
               <Button
                 size='lg'
                 style={{ backgroundColor: accentColor }}
-                className='text-white hover:opacity-90'
+                className={cn(
+                  'text-white hover:opacity-90 w-full',
+                  !isAvailable && 'pointer-events-none opacity-50'
+                )}
+                disabled={!isAvailable}
+                onClick={handleAddToCart}
               >
                 إضافة إلى الطلب
               </Button>

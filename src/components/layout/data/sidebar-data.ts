@@ -91,9 +91,7 @@ export const sidebarData: SidebarData = {
           items: [
             { title: 'الملف الشخصي', url: '/settings' },
             { title: 'الحساب', url: '/settings/account' },
-            { title: 'المظهر', url: '/settings/appearance' },
-            { title: 'الإشعارات', url: '/settings/notifications' },
-            { title: 'العرض', url: '/settings/display' },
+            { title: 'إعدادات الطلبات', url: '/settings/restaurant-ordering' },
           ],
         },
       ],

@@ -6,8 +6,13 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { AnalyticsChart } from './analytics-chart'
+import type { OrderStats } from '@/features/orders/types'
 
-export function Analytics() {
+interface AnalyticsProps {
+  stats: OrderStats | undefined
+}
+
+export function Analytics({ stats }: AnalyticsProps) {
   return (
     <div className='space-y-4'>
       <Card>
@@ -16,13 +21,13 @@ export function Analytics() {
           <CardDescription>Weekly clicks and unique visitors</CardDescription>
         </CardHeader>
         <CardContent className='px-6'>
-          <AnalyticsChart />
+          <AnalyticsChart monthlyRevenue={stats?.monthlyRevenue ?? []} />
         </CardContent>
       </Card>
       <div className='grid gap-4 sm:grid-cols-2 lg:grid-cols-4'>
         <Card>
           <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-            <CardTitle className='text-sm font-medium'>Total Clicks</CardTitle>
+            <CardTitle className='text-sm font-medium'>Total Orders</CardTitle>
             <svg
               xmlns='http://www.w3.org/2000/svg'
               viewBox='0 0 24 24'
@@ -38,15 +43,13 @@ export function Analytics() {
             </svg>
           </CardHeader>
           <CardContent>
-            <div className='text-2xl font-bold'>1,248</div>
-            <p className='text-xs text-muted-foreground'>+12.4% vs last week</p>
+            <div className='text-2xl font-bold'>{stats?.totalOrders ?? 0}</div>
+            <p className='text-xs text-muted-foreground'>طلب إجمالي</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-            <CardTitle className='text-sm font-medium'>
-              Unique Visitors
-            </CardTitle>
+            <CardTitle className='text-sm font-medium'>Total Revenue</CardTitle>
             <svg
               xmlns='http://www.w3.org/2000/svg'
               viewBox='0 0 24 24'
@@ -62,13 +65,15 @@ export function Analytics() {
             </svg>
           </CardHeader>
           <CardContent>
-            <div className='text-2xl font-bold'>832</div>
-            <p className='text-xs text-muted-foreground'>+5.8% vs last week</p>
+            <div className='text-2xl font-bold' dir='ltr'>
+              د.ع {stats?.totalRevenue?.toLocaleString('ar-IQ') ?? 0}
+            </div>
+            <p className='text-xs text-muted-foreground'>إجمالي الإيرادات</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-            <CardTitle className='text-sm font-medium'>Bounce Rate</CardTitle>
+            <CardTitle className='text-sm font-medium'>Items Sold</CardTitle>
             <svg
               xmlns='http://www.w3.org/2000/svg'
               viewBox='0 0 24 24'
@@ -83,13 +88,13 @@ export function Analytics() {
             </svg>
           </CardHeader>
           <CardContent>
-            <div className='text-2xl font-bold'>42%</div>
-            <p className='text-xs text-muted-foreground'>-3.2% vs last week</p>
+            <div className='text-2xl font-bold'>{stats?.totalItems ?? 0}</div>
+            <p className='text-xs text-muted-foreground'>أصناف مباعة</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-            <CardTitle className='text-sm font-medium'>Avg. Session</CardTitle>
+            <CardTitle className='text-sm font-medium'>Avg. Order</CardTitle>
             <svg
               xmlns='http://www.w3.org/2000/svg'
               viewBox='0 0 24 24'
@@ -105,85 +110,15 @@ export function Analytics() {
             </svg>
           </CardHeader>
           <CardContent>
-            <div className='text-2xl font-bold'>3m 24s</div>
-            <p className='text-xs text-muted-foreground'>+18s vs last week</p>
-          </CardContent>
-        </Card>
-      </div>
-      <div className='grid grid-cols-1 gap-4 lg:grid-cols-7'>
-        <Card className='col-span-1 lg:col-span-4'>
-          <CardHeader>
-            <CardTitle>Referrers</CardTitle>
-            <CardDescription>Top sources driving traffic</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <SimpleBarList
-              items={[
-                { name: 'Direct', value: 512 },
-                { name: 'Product Hunt', value: 238 },
-                { name: 'Twitter', value: 174 },
-                { name: 'Blog', value: 104 },
-              ]}
-              barClass='bg-primary'
-              valueFormatter={(n) => `${n}`}
-            />
-          </CardContent>
-        </Card>
-        <Card className='col-span-1 lg:col-span-3'>
-          <CardHeader>
-            <CardTitle>Devices</CardTitle>
-            <CardDescription>How users access your app</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <SimpleBarList
-              items={[
-                { name: 'Desktop', value: 74 },
-                { name: 'Mobile', value: 22 },
-                { name: 'Tablet', value: 4 },
-              ]}
-              barClass='bg-muted-foreground'
-              valueFormatter={(n) => `${n}%`}
-            />
+            <div className='text-2xl font-bold' dir='ltr'>
+              د.ع {
+                ((stats?.totalRevenue ?? 0) / Math.max(stats?.totalOrders ?? 1, 1)).toFixed(2)
+              }
+            </div>
+            <p className='text-xs text-muted-foreground'>متوسط قيمة الطلب</p>
           </CardContent>
         </Card>
       </div>
     </div>
-  )
-}
-
-function SimpleBarList({
-  items,
-  valueFormatter,
-  barClass,
-}: {
-  items: { name: string; value: number }[]
-  valueFormatter: (n: number) => string
-  barClass: string
-}) {
-  const max = Math.max(...items.map((i) => i.value), 1)
-  return (
-    <ul className='space-y-3'>
-      {items.map((i) => {
-        const width = `${Math.round((i.value / max) * 100)}%`
-        return (
-          <li key={i.name} className='flex items-center justify-between gap-3'>
-            <div className='min-w-0 flex-1'>
-              <div className='mb-1 truncate text-xs text-muted-foreground'>
-                {i.name}
-              </div>
-              <div className='h-2.5 w-full rounded-full bg-muted'>
-                <div
-                  className={`h-2.5 rounded-full ${barClass}`}
-                  style={{ width }}
-                />
-              </div>
-            </div>
-            <div className='ps-2 text-xs font-medium tabular-nums'>
-              {valueFormatter(i.value)}
-            </div>
-          </li>
-        )
-      })}
-    </ul>
   )
 }

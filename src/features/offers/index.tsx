@@ -18,7 +18,7 @@ import type { Offer } from './types'
 function discountLabel(offer: Offer) {
   return offer.discount_kind === 'percentage'
     ? `${offer.discount_value}%`
-    : `${offer.discount_value} ر.س`
+    : `${offer.discount_value} د.ع`
 }
 
 export function OffersManagement() {

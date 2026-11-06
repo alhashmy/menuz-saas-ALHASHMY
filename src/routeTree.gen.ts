@@ -37,6 +37,7 @@ import { Route as AuthenticatedSettingsAccountRouteImport } from './routes/_auth
 import { Route as AuthenticatedSettingsAppearanceRouteImport } from './routes/_authenticated/settings/appearance'
 import { Route as AuthenticatedSettingsDisplayRouteImport } from './routes/_authenticated/settings/display'
 import { Route as AuthenticatedSettingsNotificationsRouteImport } from './routes/_authenticated/settings/notifications'
+import { Route as AuthenticatedSettingsRestaurantOrderingRouteImport } from './routes/_authenticated/settings/restaurant-ordering'
 import { Route as AuthenticatedStaffIndexRouteImport } from './routes/_authenticated/staff/index'
 import { Route as AuthenticatedTablesIndexRouteImport } from './routes/_authenticated/tables/index'
 
@@ -193,6 +194,12 @@ const AuthenticatedSettingsNotificationsRoute =
     path: '/notifications',
     getParentRoute: () => AuthenticatedSettingsRouteRoute,
   } as any)
+const AuthenticatedSettingsRestaurantOrderingRoute =
+  AuthenticatedSettingsRestaurantOrderingRouteImport.update({
+    id: '/restaurant-ordering',
+    path: '/restaurant-ordering',
+    getParentRoute: () => AuthenticatedSettingsRouteRoute,
+  } as any)
 const AuthenticatedStaffIndexRoute = AuthenticatedStaffIndexRouteImport.update({
   id: '/staff/',
   path: '/staff/',
@@ -224,6 +231,7 @@ export interface FileRoutesByFullPath {
   '/settings/appearance': typeof AuthenticatedSettingsAppearanceRoute
   '/settings/display': typeof AuthenticatedSettingsDisplayRoute
   '/settings/notifications': typeof AuthenticatedSettingsNotificationsRoute
+  '/settings/restaurant-ordering': typeof AuthenticatedSettingsRestaurantOrderingRoute
   '/analytics/': typeof AuthenticatedAnalyticsIndexRoute
   '/branding/': typeof AuthenticatedBrandingIndexRoute
   '/dashboard/': typeof AuthenticatedDashboardIndexRoute
@@ -254,6 +262,7 @@ export interface FileRoutesByTo {
   '/settings/appearance': typeof AuthenticatedSettingsAppearanceRoute
   '/settings/display': typeof AuthenticatedSettingsDisplayRoute
   '/settings/notifications': typeof AuthenticatedSettingsNotificationsRoute
+  '/settings/restaurant-ordering': typeof AuthenticatedSettingsRestaurantOrderingRoute
   '/analytics': typeof AuthenticatedAnalyticsIndexRoute
   '/branding': typeof AuthenticatedBrandingIndexRoute
   '/dashboard': typeof AuthenticatedDashboardIndexRoute
@@ -287,6 +296,7 @@ export interface FileRoutesById {
   '/_authenticated/settings/appearance': typeof AuthenticatedSettingsAppearanceRoute
   '/_authenticated/settings/display': typeof AuthenticatedSettingsDisplayRoute
   '/_authenticated/settings/notifications': typeof AuthenticatedSettingsNotificationsRoute
+  '/_authenticated/settings/restaurant-ordering': typeof AuthenticatedSettingsRestaurantOrderingRoute
   '/_authenticated/analytics/': typeof AuthenticatedAnalyticsIndexRoute
   '/_authenticated/branding/': typeof AuthenticatedBrandingIndexRoute
   '/_authenticated/dashboard/': typeof AuthenticatedDashboardIndexRoute
@@ -320,6 +330,7 @@ export interface FileRouteTypes {
     | '/settings/appearance'
     | '/settings/display'
     | '/settings/notifications'
+    | '/settings/restaurant-ordering'
     | '/analytics/'
     | '/branding/'
     | '/dashboard/'
@@ -350,6 +361,7 @@ export interface FileRouteTypes {
     | '/settings/appearance'
     | '/settings/display'
     | '/settings/notifications'
+    | '/settings/restaurant-ordering'
     | '/analytics'
     | '/branding'
     | '/dashboard'
@@ -382,6 +394,7 @@ export interface FileRouteTypes {
     | '/_authenticated/settings/appearance'
     | '/_authenticated/settings/display'
     | '/_authenticated/settings/notifications'
+    | '/_authenticated/settings/restaurant-ordering'
     | '/_authenticated/analytics/'
     | '/_authenticated/branding/'
     | '/_authenticated/dashboard/'
@@ -609,6 +622,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSettingsNotificationsRouteImport
       parentRoute: typeof AuthenticatedSettingsRouteRoute
     }
+    '/_authenticated/settings/restaurant-ordering': {
+      id: '/_authenticated/settings/restaurant-ordering'
+      path: '/restaurant-ordering'
+      fullPath: '/settings/restaurant-ordering'
+      preLoaderRoute: typeof AuthenticatedSettingsRestaurantOrderingRouteImport
+      parentRoute: typeof AuthenticatedSettingsRouteRoute
+    }
     '/_authenticated/staff/': {
       id: '/_authenticated/staff/'
       path: '/staff'
@@ -631,6 +651,7 @@ interface AuthenticatedSettingsRouteRouteChildren {
   AuthenticatedSettingsAppearanceRoute: typeof AuthenticatedSettingsAppearanceRoute
   AuthenticatedSettingsDisplayRoute: typeof AuthenticatedSettingsDisplayRoute
   AuthenticatedSettingsNotificationsRoute: typeof AuthenticatedSettingsNotificationsRoute
+  AuthenticatedSettingsRestaurantOrderingRoute: typeof AuthenticatedSettingsRestaurantOrderingRoute
   AuthenticatedSettingsIndexRoute: typeof AuthenticatedSettingsIndexRoute
 }
 
@@ -641,6 +662,8 @@ const AuthenticatedSettingsRouteRouteChildren: AuthenticatedSettingsRouteRouteCh
     AuthenticatedSettingsDisplayRoute: AuthenticatedSettingsDisplayRoute,
     AuthenticatedSettingsNotificationsRoute:
       AuthenticatedSettingsNotificationsRoute,
+    AuthenticatedSettingsRestaurantOrderingRoute:
+      AuthenticatedSettingsRestaurantOrderingRoute,
     AuthenticatedSettingsIndexRoute: AuthenticatedSettingsIndexRoute,
   }
 

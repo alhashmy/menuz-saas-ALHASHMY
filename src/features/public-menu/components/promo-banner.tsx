@@ -10,7 +10,7 @@ interface PromoBannerProps {
 function discountLabel(offer: PublicOrderOffer) {
   return offer.discount_kind === 'percentage'
     ? `${offer.discount_value}%`
-    : `${offer.discount_value} ر.س`
+    : `${offer.discount_value} د.ع`
 }
 
 export function PromoBanner({ offers, accentColor }: PromoBannerProps) {

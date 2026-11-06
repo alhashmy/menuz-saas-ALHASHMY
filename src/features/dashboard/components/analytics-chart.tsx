@@ -1,44 +1,28 @@
 import { Area, AreaChart, ResponsiveContainer, XAxis, YAxis } from 'recharts'
 
-const data = [
-  {
-    name: 'Mon',
-    clicks: Math.floor(Math.random() * 900) + 100,
-    uniques: Math.floor(Math.random() * 700) + 80,
-  },
-  {
-    name: 'Tue',
-    clicks: Math.floor(Math.random() * 900) + 100,
-    uniques: Math.floor(Math.random() * 700) + 80,
-  },
-  {
-    name: 'Wed',
-    clicks: Math.floor(Math.random() * 900) + 100,
-    uniques: Math.floor(Math.random() * 700) + 80,
-  },
-  {
-    name: 'Thu',
-    clicks: Math.floor(Math.random() * 900) + 100,
-    uniques: Math.floor(Math.random() * 700) + 80,
-  },
-  {
-    name: 'Fri',
-    clicks: Math.floor(Math.random() * 900) + 100,
-    uniques: Math.floor(Math.random() * 700) + 80,
-  },
-  {
-    name: 'Sat',
-    clicks: Math.floor(Math.random() * 900) + 100,
-    uniques: Math.floor(Math.random() * 700) + 80,
-  },
-  {
-    name: 'Sun',
-    clicks: Math.floor(Math.random() * 900) + 100,
-    uniques: Math.floor(Math.random() * 700) + 80,
-  },
-]
+interface AnalyticsChartProps {
+  monthlyRevenue: { month: string; revenue: number }[]
+}
 
-export function AnalyticsChart() {
+export function AnalyticsChart({ monthlyRevenue }: AnalyticsChartProps) {
+  const data =
+    monthlyRevenue.length > 0
+      ? monthlyRevenue.map((m) => ({ name: m.month, revenue: m.revenue }))
+      : [
+          { name: 'jan', revenue: 0 },
+          { name: 'feb', revenue: 0 },
+          { name: 'mar', revenue: 0 },
+          { name: 'apr', revenue: 0 },
+          { name: 'may', revenue: 0 },
+          { name: 'jun', revenue: 0 },
+          { name: 'jul', revenue: 0 },
+          { name: 'aug', revenue: 0 },
+          { name: 'sep', revenue: 0 },
+          { name: 'oct', revenue: 0 },
+          { name: 'nov', revenue: 0 },
+          { name: 'dec', revenue: 0 },
+        ]
+
   return (
     <ResponsiveContainer width='100%' height={300}>
       <AreaChart data={data}>
@@ -54,22 +38,15 @@ export function AnalyticsChart() {
           fontSize={12}
           tickLine={false}
           axisLine={false}
+          tickFormatter={(value) => `د.ع ${value}`}
         />
         <Area
           type='monotone'
-          dataKey='clicks'
+          dataKey='revenue'
           stroke='currentColor'
           className='text-primary'
           fill='currentColor'
           fillOpacity={0.15}
-        />
-        <Area
-          type='monotone'
-          dataKey='uniques'
-          stroke='currentColor'
-          className='text-muted-foreground'
-          fill='currentColor'
-          fillOpacity={0.1}
         />
       </AreaChart>
     </ResponsiveContainer>

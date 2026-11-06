@@ -1,43 +1,254 @@
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import { Loader2, Pencil, Plus, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { getMenuImageUrl } from '@/lib/supabase'
+import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Header } from '@/components/layout/header'
 import { Main } from '@/components/layout/main'
 import { Switch } from '@/components/ui/switch'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { ProfileDropdown } from '@/components/profile-dropdown'
 import { ThemeSwitch } from '@/components/theme-switch'
+import {
+  DndContext,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core'
+import { CSS } from '@dnd-kit/utilities'
+import {
+  SortableContext,
+  useSortable,
+  arrayMove,
+} from '@dnd-kit/sortable'
 import {
   useDeleteCategory,
   useDeleteMenuItem,
   useMenuCategories,
   useMenuItems,
   useToggleItemAvailability,
+  useUpdateSortOrder,
 } from './api'
 import { CategoryDialog } from './components/category-dialog'
 import { ItemDialog } from './components/item-dialog'
 import type { MenuCategory, MenuItem } from './types'
 
+function SortableItem({
+  item,
+  index,
+  toggleAvailability,
+  setEditingItem,
+  setDeleteTarget,
+  isReorderMode,
+}: {
+  item: MenuItem
+  index: number
+  toggleAvailability: ReturnType<typeof useToggleItemAvailability>
+  setEditingItem: (item: MenuItem | null) => void
+  setDeleteTarget: (target: { type: 'category' | 'item'; id: string; name: string } | null) => void
+  isReorderMode: boolean
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition } =
+    useSortable({ id: item.id })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  }
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      className={cn(
+        'transition-transform duration-200 rounded-lg border bg-card p-3 shadow-sm hover:shadow-md mb-2',
+        !isReorderMode
+          ? 'cursor-default'
+          : 'cursor-grab active:cursor-grabbing',
+        !item.is_available && 'opacity-60 grayscale'
+      )}
+    >
+      <div className='flex items-center justify-between gap-3'>
+        <div className='flex items-center gap-3'>
+          {isReorderMode && (
+            <div className='shrink-0 text-muted-foreground text-xs font-medium mr-2'>
+              ⋮⋮
+            </div>
+          )}
+          <div className='shrink-0 text-muted-foreground text-xs font-medium'>
+            {index + 1}
+          </div>
+          <div className='relative shrink-0 overflow-hidden rounded-md border border-muted/40'>
+            {item.image_path ? (
+              <img
+                src={getMenuImageUrl(item.image_path) ?? ''}
+                alt={item.name_ar ?? item.name}
+                className='size-10 object-cover object-center'
+              />
+            ) : (
+              <div className='size-10 rounded-md border bg-muted' />
+            )}
+          </div>
+          <div>
+            <p className='font-medium truncate'>{item.name_ar ?? item.name}</p>
+            <p className='text-xs text-muted-foreground'>
+              {item.price.toFixed(2)} د.ع
+            </p>
+          </div>
+        </div>
+        {!isReorderMode && (
+          <div className='flex items-center gap-2'>
+            <Switch
+              checked={item.is_available}
+              onCheckedChange={(checked) => {
+                toggleAvailability.mutate({
+                  id: item.id,
+                  is_available: checked,
+                })
+              }}
+            />
+            <span
+              className={cn(
+                'text-xs font-medium px-2 py-0.5 rounded',
+                !item.is_available
+                  ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                  : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+              )}
+            >
+              {item.is_available ? 'متاح' : 'غير متوفر'}
+            </span>
+            <Button
+              size='icon'
+              variant='ghost'
+              onClick={() => {
+                setEditingItem(item)
+              }}
+            >
+              <Pencil className='size-4' />
+            </Button>
+            <Button
+              size='icon'
+              variant='ghost'
+              onClick={() =>
+                setDeleteTarget({
+                  type: 'item',
+                  id: item.id,
+                  name: item.name_ar ?? item.name,
+                })
+              }
+            >
+              <Trash2 className='size-4 text-destructive' />
+            </Button>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function CategoryItems({
+  category,
+  items,
+  sensors,
+  updateSortOrder,
+  toggleAvailability,
+  setEditingItem,
+  setDeleteTarget,
+  isReorderMode,
+}: {
+  category: MenuCategory
+  items: MenuItem[]
+  sensors: ReturnType<typeof useSensors>
+  updateSortOrder: ReturnType<typeof useUpdateSortOrder>
+  toggleAvailability: ReturnType<typeof useToggleItemAvailability>
+  setEditingItem: (item: MenuItem | null) => void
+  setDeleteTarget: (target: { type: 'category' | 'item'; id: string; name: string } | null) => void
+  isReorderMode: boolean
+}) {
+  const sortedItems = items
+    .filter((item) => item.category_id === category.id)
+    .sort((a, b) => a.sort_order - b.sort_order)
+
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event
+    if (!over || active.id === over.id) return
+
+    const activeIndex = sortedItems.findIndex((i) => i.id === active.id)
+    const overIndex = sortedItems.findIndex((i) => i.id === over.id)
+
+    if (activeIndex === -1 || overIndex === -1) return
+
+    const newItems = arrayMove(sortedItems, activeIndex, overIndex)
+    const updates = newItems.map((item, idx) => ({
+      id: item.id,
+      sort_order: idx,
+    }))
+    updateSortOrder.mutate(updates)
+  }
+
+  if (sortedItems.length === 0) {
+    return (
+      <p className='p-4 text-sm text-muted-foreground'>
+        لا توجد وجبات في هذا القسم بعد.
+      </p>
+    )
+  }
+
+  const reorderUI = isReorderMode ? (
+    <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+      <SortableContext items={sortedItems.map((item) => item.id)}>
+        <div className='space-y-2'>
+          {sortedItems.map((item, index) => (
+            <SortableItem
+              key={item.id}
+              item={item}
+              index={index}
+              toggleAvailability={toggleAvailability}
+              setEditingItem={setEditingItem}
+              setDeleteTarget={setDeleteTarget}
+              isReorderMode={true}
+            />
+          ))}
+        </div>
+      </SortableContext>
+    </DndContext>
+  ) : (
+    <div className='space-y-2'>
+      {sortedItems.map((item, index) => (
+        <SortableItem
+          key={item.id}
+          item={item}
+          index={index}
+          toggleAvailability={toggleAvailability}
+          setEditingItem={setEditingItem}
+          setDeleteTarget={setDeleteTarget}
+          isReorderMode={false}
+        />
+      ))}
+    </div>
+  )
+
+  return <>{reorderUI}</>
+}
+
 export function MenuManagement() {
-  const { data: categories = [], isLoading: loadingCategories } = useMenuCategories()
-  const { data: items = [], isLoading: loadingItems } = useMenuItems()
+  const { data: categories = [], isLoading: loadingCategories } =
+    useMenuCategories()
+  const { data: allItems = [], isLoading: loadingItems } = useMenuItems()
   const toggleAvailability = useToggleItemAvailability()
   const deleteCategory = useDeleteCategory()
   const deleteItem = useDeleteMenuItem()
+  const updateSortOrder = useUpdateSortOrder()
 
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false)
-  const [editingCategory, setEditingCategory] = useState<MenuCategory | null>(null)
+  const [editingCategory, setEditingCategory] = useState<MenuCategory | null>(
+    null
+  )
 
   const [itemDialogOpen, setItemDialogOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<MenuItem | null>(null)
@@ -46,7 +257,10 @@ export function MenuManagement() {
     { type: 'category' | 'item'; id: string; name: string } | null
   >(null)
 
+  const [isReorderMode, setIsReorderMode] = useState(false)
+
   const isLoading = loadingCategories || loadingItems
+  const sensors = useSensors(useSensor(PointerSensor))
 
   async function confirmDelete() {
     if (!deleteTarget) return
@@ -63,6 +277,13 @@ export function MenuManagement() {
       setDeleteTarget(null)
     }
   }
+
+  const handleToggleReorderMode = useCallback(
+    (next: boolean) => {
+      setIsReorderMode(next)
+    },
+    []
+  )
 
   return (
     <>
@@ -81,7 +302,18 @@ export function MenuManagement() {
               الأقسام، الوجبات، الأسعار، وحالة التوفر.
             </p>
           </div>
-          <div className='flex gap-2'>
+          <div className='flex gap-2 items-center'>
+            <Button
+              variant='outline'
+              size='sm'
+              className={cn(
+                'flex items-center gap-1.5',
+                isReorderMode && 'bg-primary text-primary-foreground'
+              )}
+              onClick={() => handleToggleReorderMode(!isReorderMode)}
+            >
+              {isReorderMode ? 'إنهاء التعديل' : 'تعديل الأماكن'}
+            </Button>
             <Button
               variant='outline'
               onClick={() => {
@@ -96,7 +328,7 @@ export function MenuManagement() {
                 setEditingItem(null)
                 setItemDialogOpen(true)
               }}
-              disabled={categories.length === 0}
+              disabled={categories.length === 0 || isReorderMode}
             >
               <Plus /> وجبة جديدة
             </Button>
@@ -114,7 +346,7 @@ export function MenuManagement() {
         ) : (
           <div className='space-y-8'>
             {categories.map((category) => {
-              const categoryItems = items.filter(
+              const categoryItems = allItems.filter(
                 (item) => item.category_id === category.id
               )
               return (
@@ -130,6 +362,7 @@ export function MenuManagement() {
                       <Button
                         size='icon'
                         variant='ghost'
+                        disabled={isReorderMode}
                         onClick={() => {
                           setEditingCategory(category)
                           setCategoryDialogOpen(true)
@@ -140,6 +373,7 @@ export function MenuManagement() {
                       <Button
                         size='icon'
                         variant='ghost'
+                        disabled={isReorderMode}
                         onClick={() =>
                           setDeleteTarget({
                             type: 'category',
@@ -152,81 +386,16 @@ export function MenuManagement() {
                       </Button>
                     </div>
                   </div>
-
-                  {categoryItems.length === 0 ? (
-                    <p className='p-4 text-sm text-muted-foreground'>
-                      لا توجد وجبات في هذا القسم بعد.
-                    </p>
-                  ) : (
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className='w-14'></TableHead>
-                          <TableHead>الاسم</TableHead>
-                          <TableHead>السعر</TableHead>
-                          <TableHead>متاح؟</TableHead>
-                          <TableHead className='text-left'>إجراءات</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {categoryItems.map((item) => (
-                          <TableRow key={item.id}>
-                            <TableCell>
-                              {item.image_path ? (
-                                <img
-                                  src={getMenuImageUrl(item.image_path) ?? ''}
-                                  alt={item.name_ar ?? item.name}
-                                  className='size-10 rounded-md border object-cover'
-                                />
-                              ) : (
-                                <div className='size-10 rounded-md border bg-muted' />
-                              )}
-                            </TableCell>
-                            <TableCell className='font-medium'>
-                              {item.name_ar ?? item.name}
-                            </TableCell>
-                            <TableCell>{item.price.toFixed(2)}</TableCell>
-                            <TableCell>
-                              <Switch
-                                checked={item.is_available}
-                                onCheckedChange={(checked) =>
-                                  toggleAvailability.mutate({
-                                    id: item.id,
-                                    is_available: checked,
-                                  })
-                                }
-                              />
-                            </TableCell>
-                            <TableCell className='flex justify-end gap-1'>
-                              <Button
-                                size='icon'
-                                variant='ghost'
-                                onClick={() => {
-                                  setEditingItem(item)
-                                  setItemDialogOpen(true)
-                                }}
-                              >
-                                <Pencil className='size-4' />
-                              </Button>
-                              <Button
-                                size='icon'
-                                variant='ghost'
-                                onClick={() =>
-                                  setDeleteTarget({
-                                    type: 'item',
-                                    id: item.id,
-                                    name: item.name_ar ?? item.name,
-                                  })
-                                }
-                              >
-                                <Trash2 className='size-4 text-destructive' />
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  )}
+                  <CategoryItems
+                    category={category}
+                    items={allItems}
+                    sensors={sensors}
+                    updateSortOrder={updateSortOrder}
+                    toggleAvailability={toggleAvailability}
+                    setEditingItem={setEditingItem}
+                    setDeleteTarget={setDeleteTarget}
+                    isReorderMode={isReorderMode}
+                  />
                 </div>
               )
             })}
