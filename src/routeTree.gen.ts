@@ -24,6 +24,7 @@ import { Route as errors503RouteImport } from './routes/(errors)/503'
 import { Route as AuthenticatedSettingsRouteRouteImport } from './routes/_authenticated/settings/route'
 import { Route as MenuRestaurantSlugRouteImport } from './routes/menu.$restaurantSlug'
 import { Route as AuthenticatedAnalyticsIndexRouteImport } from './routes/_authenticated/analytics/index'
+import { Route as AuthenticatedAppsIndexRouteImport } from './routes/_authenticated/apps/index'
 import { Route as AuthenticatedBrandingIndexRouteImport } from './routes/_authenticated/branding/index'
 import { Route as AuthenticatedDashboardIndexRouteImport } from './routes/_authenticated/dashboard/index'
 import { Route as AuthenticatedErrorsErrorRouteImport } from './routes/_authenticated/errors/$error'
@@ -117,6 +118,11 @@ const AuthenticatedAnalyticsIndexRoute =
     path: '/analytics/',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedAppsIndexRoute = AuthenticatedAppsIndexRouteImport.update({
+  id: '/apps/',
+  path: '/apps/',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedBrandingIndexRoute =
   AuthenticatedBrandingIndexRouteImport.update({
     id: '/branding/',
@@ -233,6 +239,7 @@ export interface FileRoutesByFullPath {
   '/settings/notifications': typeof AuthenticatedSettingsNotificationsRoute
   '/settings/restaurant-ordering': typeof AuthenticatedSettingsRestaurantOrderingRoute
   '/analytics/': typeof AuthenticatedAnalyticsIndexRoute
+  '/apps/': typeof AuthenticatedAppsIndexRoute
   '/branding/': typeof AuthenticatedBrandingIndexRoute
   '/dashboard/': typeof AuthenticatedDashboardIndexRoute
   '/help-center/': typeof AuthenticatedHelpCenterIndexRoute
@@ -264,6 +271,7 @@ export interface FileRoutesByTo {
   '/settings/notifications': typeof AuthenticatedSettingsNotificationsRoute
   '/settings/restaurant-ordering': typeof AuthenticatedSettingsRestaurantOrderingRoute
   '/analytics': typeof AuthenticatedAnalyticsIndexRoute
+  '/apps': typeof AuthenticatedAppsIndexRoute
   '/branding': typeof AuthenticatedBrandingIndexRoute
   '/dashboard': typeof AuthenticatedDashboardIndexRoute
   '/help-center': typeof AuthenticatedHelpCenterIndexRoute
@@ -298,6 +306,7 @@ export interface FileRoutesById {
   '/_authenticated/settings/notifications': typeof AuthenticatedSettingsNotificationsRoute
   '/_authenticated/settings/restaurant-ordering': typeof AuthenticatedSettingsRestaurantOrderingRoute
   '/_authenticated/analytics/': typeof AuthenticatedAnalyticsIndexRoute
+  '/_authenticated/apps/': typeof AuthenticatedAppsIndexRoute
   '/_authenticated/branding/': typeof AuthenticatedBrandingIndexRoute
   '/_authenticated/dashboard/': typeof AuthenticatedDashboardIndexRoute
   '/_authenticated/help-center/': typeof AuthenticatedHelpCenterIndexRoute
@@ -332,6 +341,7 @@ export interface FileRouteTypes {
     | '/settings/notifications'
     | '/settings/restaurant-ordering'
     | '/analytics/'
+    | '/apps/'
     | '/branding/'
     | '/dashboard/'
     | '/help-center/'
@@ -363,6 +373,7 @@ export interface FileRouteTypes {
     | '/settings/notifications'
     | '/settings/restaurant-ordering'
     | '/analytics'
+    | '/apps'
     | '/branding'
     | '/dashboard'
     | '/help-center'
@@ -396,6 +407,7 @@ export interface FileRouteTypes {
     | '/_authenticated/settings/notifications'
     | '/_authenticated/settings/restaurant-ordering'
     | '/_authenticated/analytics/'
+    | '/_authenticated/apps/'
     | '/_authenticated/branding/'
     | '/_authenticated/dashboard/'
     | '/_authenticated/help-center/'
@@ -529,6 +541,13 @@ declare module '@tanstack/react-router' {
       path: '/analytics'
       fullPath: '/analytics/'
       preLoaderRoute: typeof AuthenticatedAnalyticsIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/apps/': {
+      id: '/_authenticated/apps/'
+      path: '/apps'
+      fullPath: '/apps/'
+      preLoaderRoute: typeof AuthenticatedAppsIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/branding/': {
@@ -676,6 +695,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedSettingsRouteRoute: typeof AuthenticatedSettingsRouteRouteWithChildren
   AuthenticatedErrorsErrorRoute: typeof AuthenticatedErrorsErrorRoute
   AuthenticatedAnalyticsIndexRoute: typeof AuthenticatedAnalyticsIndexRoute
+  AuthenticatedAppsIndexRoute: typeof AuthenticatedAppsIndexRoute
   AuthenticatedBrandingIndexRoute: typeof AuthenticatedBrandingIndexRoute
   AuthenticatedDashboardIndexRoute: typeof AuthenticatedDashboardIndexRoute
   AuthenticatedHelpCenterIndexRoute: typeof AuthenticatedHelpCenterIndexRoute
@@ -691,6 +711,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedSettingsRouteRoute: AuthenticatedSettingsRouteRouteWithChildren,
   AuthenticatedErrorsErrorRoute: AuthenticatedErrorsErrorRoute,
   AuthenticatedAnalyticsIndexRoute: AuthenticatedAnalyticsIndexRoute,
+  AuthenticatedAppsIndexRoute: AuthenticatedAppsIndexRoute,
   AuthenticatedBrandingIndexRoute: AuthenticatedBrandingIndexRoute,
   AuthenticatedDashboardIndexRoute: AuthenticatedDashboardIndexRoute,
   AuthenticatedHelpCenterIndexRoute: AuthenticatedHelpCenterIndexRoute,

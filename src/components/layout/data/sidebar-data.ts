@@ -10,6 +10,7 @@ import {
   QrCode,
   Settings,
   Command,
+  Grid,
 } from 'lucide-react'
 import { type SidebarData } from '../types'
 
@@ -79,6 +80,11 @@ export const sidebarData: SidebarData = {
           title: 'أكواد QR',
           url: '/qr-codes',
           icon: QrCode,
+        },
+        {
+          title: 'التطبيقات',
+          url: '/apps',
+          icon: Grid,
         },
       ],
     },

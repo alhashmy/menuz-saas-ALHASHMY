@@ -26,20 +26,20 @@ import { Textarea } from '@/components/ui/textarea'
 
 const profileFormSchema = z.object({
   username: z
-    .string('Please enter your username.')
-    .min(2, 'Username must be at least 2 characters.')
-    .max(30, 'Username must not be longer than 30 characters.'),
+    .string('الرجاء إدخال اسم المستخدم.')
+    .min(2, 'يجب ألا يقل اسم المستخدم عن حرفين.')
+    .max(30, 'يجب ألا يزيد اسم المستخدم عن 30 حرفاً.'),
   email: z.email({
     error: (iss) =>
       iss.input === undefined
-        ? 'Please select an email to display.'
+        ? 'الرجاء تحديد بريد إلكتروني للعرض.'
         : undefined,
   }),
   bio: z.string().max(160).min(4),
   urls: z
     .array(
       z.object({
-        value: z.url('Please enter a valid URL.'),
+        value: z.url('الرجاء إدخال رابط صحيح.'),
       })
     )
     .optional(),
@@ -49,7 +49,7 @@ type ProfileFormValues = z.infer<typeof profileFormSchema>
 
 // This can come from your database or API.
 const defaultValues: Partial<ProfileFormValues> = {
-  bio: 'I own a computer.',
+  bio: 'لدي جهاز كمبيوتر.',
   urls: [
     { value: 'https://shadcn.com' },
     { value: 'http://twitter.com/shadcn' },
@@ -79,13 +79,13 @@ export function ProfileForm() {
           name='username'
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Username</FormLabel>
+              <FormLabel>اسم المستخدم</FormLabel>
               <FormControl>
-                <Input placeholder='shadcn' {...field} />
+                <Input placeholder='اسم المستخدم' {...field} />
               </FormControl>
               <FormDescription>
-                This is your public display name. It can be your real name or a
-                pseudonym. You can only change this once every 30 days.
+                هذا هو اسم العرض العام الخاص بك. يمكن أن يكون اسمك الحقيقي أو
+                لقباً. يمكنك تغييره مرة واحدة فقط كل 30 يوماً.
               </FormDescription>
               <FormMessage />
             </FormItem>
@@ -96,11 +96,11 @@ export function ProfileForm() {
           name='email'
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Email</FormLabel>
+              <FormLabel>البريد الإلكتروني</FormLabel>
               <Select onValueChange={field.onChange} defaultValue={field.value}>
                 <FormControl>
                   <SelectTrigger>
-                    <SelectValue placeholder='Select a verified email to display' />
+                    <SelectValue placeholder='تحديد بريد إلكتروني تم التحقق منه للعرض' />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
@@ -110,8 +110,8 @@ export function ProfileForm() {
                 </SelectContent>
               </Select>
               <FormDescription>
-                You can manage verified email addresses in your{' '}
-                <Link to='/'>email settings</Link>.
+                يمكنك إدارة عناوين البريد الإلكتروني التي تم التحقق منها في{' '}
+                <Link to='/'>إعدادات البريد الإلكتروني</Link>.
               </FormDescription>
               <FormMessage />
             </FormItem>
@@ -122,17 +122,16 @@ export function ProfileForm() {
           name='bio'
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Bio</FormLabel>
+              <FormLabel>السيرة الذاتية</FormLabel>
               <FormControl>
                 <Textarea
-                  placeholder='Tell us a little bit about yourself'
+                  placeholder='أخبرنا قليلاً عن نفسك'
                   className='resize-none'
                   {...field}
                 />
               </FormControl>
               <FormDescription>
-                You can <span>@mention</span> other users and organizations to
-                link to them.
+                يمكنك <span>@mention</span> المستخدمين والمنظمات الآخرين للربط بهم.
               </FormDescription>
               <FormMessage />
             </FormItem>
@@ -147,10 +146,10 @@ export function ProfileForm() {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel className={cn(index !== 0 && 'sr-only')}>
-                    URLs
+                    الروابط
                   </FormLabel>
                   <FormDescription className={cn(index !== 0 && 'sr-only')}>
-                    Add links to your website, blog, or social media profiles.
+                    أضف روابط لموقعك الإلكتروني أو مدونتك أو ملفاتك الشخصية على وسائل التواصل الاجتماعي.
                   </FormDescription>
                   <FormControl className={cn(index !== 0 && 'mt-1.5')}>
                     <Input {...field} />
@@ -167,10 +166,10 @@ export function ProfileForm() {
             className='mt-2'
             onClick={() => append({ value: '' })}
           >
-            Add URL
+            إضافة رابط
           </Button>
         </div>
-        <Button type='submit'>Update profile</Button>
+        <Button type='submit'>تحديث الملف الشخصي</Button>
       </form>
     </Form>
   )

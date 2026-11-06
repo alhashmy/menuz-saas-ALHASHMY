@@ -12,6 +12,11 @@ import {
 } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import {
+  Tabs,
+  TabsList,
+  TabsTrigger,
+} from '@/components/ui/tabs'
 import { useOrders } from '@/features/orders/api'
 import { OrderDetailsSheet } from '@/features/orders/components/OrderDetailsSheet'
 import { RefreshCw, Eye } from 'lucide-react'
@@ -35,17 +40,30 @@ const STATUS_VARIANTS: Record<string, 'default' | 'secondary' | 'destructive' | 
   cancelled: 'destructive',
 }
 
+const FILTER_TABS = [
+  { value: 'all', label: 'الكل' },
+  { value: 'pending', label: 'قيد الانتظار' },
+  { value: 'completed', label: 'مكتمل' },
+  { value: 'cancelled', label: 'ملغي' },
+]
+
 export function OrdersPage() {
   const { restaurant } = useAuthStore()
   const restaurantId = restaurant?.id ?? null
   const queryClient = useQueryClient()
   const { data: orders = [], isLoading } = useOrders(restaurantId)
   const [detailsOpenId, setDetailsOpenId] = useState<string | null>(null)
+  const [filterStatus, setFilterStatus] = useState<string>('all')
 
   function handleRefresh() {
     queryClient.invalidateQueries({ queryKey: ['orders', restaurantId] })
     queryClient.invalidateQueries({ queryKey: ['order-stats', restaurantId] })
   }
+
+  const filteredOrders =
+    filterStatus === 'all'
+      ? orders
+      : orders.filter((order) => order.status === filterStatus)
 
   if (isLoading) {
     return (
@@ -75,6 +93,21 @@ export function OrdersPage() {
         </Button>
       </div>
 
+      <Tabs
+        defaultValue='all'
+        value={filterStatus}
+        onValueChange={(value) => setFilterStatus(value)}
+        className='w-full max-w-md'
+      >
+        <TabsList className='grid w-full grid-cols-4'>
+          {FILTER_TABS.map((tab) => (
+            <TabsTrigger key={tab.value} value={tab.value}>
+              {tab.label}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+      </Tabs>
+
       <div className='rounded-lg border'>
         <Table>
           <TableHeader>
@@ -90,14 +123,14 @@ export function OrdersPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {orders.length === 0 ? (
+            {filteredOrders.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={8} className='h-24 text-center text-muted-foreground'>
-                  لا توجد طلبات بعد.
+                  لا توجد طلبات حسب هذا التصفية.
                 </TableCell>
               </TableRow>
             ) : (
-              orders.map((order) => (
+              filteredOrders.map((order) => (
                 <TableRow key={order.id}>
                   <TableCell className='font-mono text-sm text-muted-foreground'>
                     #{order.id.slice(0, 8)}
@@ -142,14 +175,6 @@ export function OrdersPage() {
                       >
                         <Eye className='size-4' />
                       </Button>
-                      <Button
-                        variant='ghost'
-                        size='sm'
-                        className='h-8 w-8 p-0'
-                        onClick={() => setDetailsOpenId(order.id)}
-                      >
-                        <RefreshCw className='size-4' />
-                      </Button>
                     </div>
                     <OrderDetailsSheet
                       open={detailsOpenId === order.id}
@@ -165,7 +190,7 @@ export function OrdersPage() {
             )}
           </TableBody>
           <TableCaption>
-            إجمالي الطلبات: {orders.length}
+            إجمالي الطلبات: {filteredOrders.length}
           </TableCaption>
         </Table>
       </div>
