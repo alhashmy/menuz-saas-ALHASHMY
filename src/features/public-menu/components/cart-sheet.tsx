@@ -76,10 +76,11 @@ export function CartSheet({ open, onOpenChange, restaurantId }: CartSheetProps) 
         '',
         '🛒 الوجبات المطلوبة:',
         ...items.map(
-          (item) => `- ${item.name} × ${item.quantity} - ${item.price.toLocaleString('ar-IQ')} د.ع`
+          (item) =>
+            `- ${item.name} × ${item.quantity} - ${(item.price ?? 0).toLocaleString('ar-IQ')} د.ع`
         ),
         '',
-        `💰 الإجمالي النهائي: ${subtotal.toLocaleString('ar-IQ')} د.ع`,
+        `💰 الإجمالي النهائي: ${(subtotal ?? 0).toLocaleString('ar-IQ')} د.ع`,
       ]
         .filter(Boolean)
         .join('\n')
@@ -117,7 +118,7 @@ export function CartSheet({ open, onOpenChange, restaurantId }: CartSheetProps) 
       })
 
       toast('تم إرسال الطلب بنجاح', {
-        description: `مبلغ ${subtotal.toLocaleString('ar-IQ')} د.ع`,
+        description: `مبلغ ${(subtotal ?? 0).toLocaleString('ar-IQ')} د.ع`,
       })
       clear()
       setCheckoutStep('items')
@@ -224,21 +225,21 @@ export function CartSheet({ open, onOpenChange, restaurantId }: CartSheetProps) 
                 <div className='flex items-center justify-between text-sm'>
                   <span className='text-muted-foreground'>المجموع الفرعي</span>
                   <span dir='ltr' className='font-medium'>
-                    {subtotal.toLocaleString('ar-IQ')} د.ع
+                    {(subtotal ?? 0).toLocaleString('ar-IQ')} د.ع
                   </span>
                 </div>
                 {discountAmount > 0 && (
                   <div className='flex items-center justify-between text-sm'>
                     <span className='text-muted-foreground'>الخصم</span>
                     <span dir='ltr' className='font-medium text-red-600'>
-                      -{discountAmount.toLocaleString('ar-IQ')} د.ع
+                      -{(discountAmount ?? 0).toLocaleString('ar-IQ')} د.ع
                     </span>
                   </div>
                 )}
                 <div className='flex items-center justify-between border-t border-border pt-2 mt-2 text-lg font-bold'>
                   <span>الإجمالي النهائي</span>
                   <span dir='ltr' className='text-primary'>
-                    {subtotal.toLocaleString('ar-IQ')} د.ع
+                    {(subtotal ?? 0).toLocaleString('ar-IQ')} د.ع
                   </span>
                 </div>
               </div>
@@ -351,7 +352,7 @@ export function CartSheet({ open, onOpenChange, restaurantId }: CartSheetProps) 
                 <div className='flex items-center justify-between text-sm'>
                   <span className='text-muted-foreground'>الإجمالي النهائي</span>
                   <span dir='ltr' className='font-bold text-lg text-primary'>
-                    {subtotal.toLocaleString('ar-IQ')} د.ع
+                    {(subtotal ?? 0).toLocaleString('ar-IQ')} د.ع
                   </span>
                 </div>
               </div>

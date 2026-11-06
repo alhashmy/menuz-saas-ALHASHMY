@@ -23,7 +23,7 @@ export function useOrders(restaurantId: string | null) {
         items: row.items,
         discount_code: row.discount_code,
         discount_amount: row.discount_amount,
-        total: row.total,
+        total_amount: row.total_amount,
         status: row.status,
         created_at: row.created_at,
       }))
@@ -44,9 +44,12 @@ export function useOrderStats(restaurantId: string | null) {
       const orders = (data ?? []) as Order[]
 
       const totalOrders = orders.length
-      const totalRevenue = orders.reduce((sum, o) => sum + o.total, 0)
+      const totalRevenue = orders.reduce(
+        (sum, o) => sum + (Number(o.total_amount) || 0),
+        0
+      )
       const totalItems = orders.reduce(
-        (sum, o) => sum + o.items.reduce((s, i) => s + i.quantity, 0),
+        (sum, o) => sum + (o.items ?? []).reduce((s, i) => s + (Number(i.quantity) || 0), 0),
         0
       )
 
@@ -68,11 +71,35 @@ export function useOrderStats(restaurantId: string | null) {
         const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
         const monthKey = d.toISOString().slice(0, 7)
         const monthOrders = orders.filter((o) => o.created_at.slice(0, 7) === monthKey)
-        const revenue = monthOrders.reduce((sum, o) => sum + o.total, 0)
+        const revenue = monthOrders.reduce((sum, o) => sum + Number(o.total_amount || 0), 0)
         monthlyRevenue.push({ month: d.toLocaleString('ar-SA', { month: 'short' }), revenue })
       }
 
       return { totalOrders, totalRevenue, totalItems, ordersByStatus, monthlyRevenue }
+    },
+  })
+}
+
+export function useUpdateOrderStatus() {
+  const queryClient = useQueryClient()
+  const restaurantId = useAuthStore((s) => s.restaurant?.id)
+
+  return useMutation({
+    mutationFn: async ({ id, status }: { id: string; status: OrderStatus }) => {
+      const { data, error } = await supabase
+        .from('orders')
+        .update({ status })
+        .eq('id', id)
+        .select()
+        .single()
+      if (error) throw error
+      return data
+    },
+    onSuccess: () => {
+      if (restaurantId) {
+        queryClient.invalidateQueries({ queryKey: ['orders', restaurantId] })
+        queryClient.invalidateQueries({ queryKey: ['order-stats', restaurantId] })
+      }
     },
   })
 }

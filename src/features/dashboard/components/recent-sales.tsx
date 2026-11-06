@@ -36,7 +36,7 @@ export function RecentSales({ orders }: RecentSalesProps) {
             </div>
             <div className='flex flex-col items-end'>
               <div className='font-medium' dir='ltr'>
-                د.ع {order.total.toFixed(2)}
+                د.ع {(order.total_amount ?? 0).toFixed(2)}
               </div>
               <Badge
                 variant={

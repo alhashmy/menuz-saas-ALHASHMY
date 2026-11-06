@@ -17,7 +17,7 @@ export interface Order {
   items: OrderItem[]
   discount_code: string | null
   discount_amount: number
-  total: number
+  total_amount: number
   status: OrderStatus
   created_at: string
 }

@@ -82,7 +82,7 @@ export function Dashboard() {
                 </CardHeader>
                 <CardContent>
                   <div className='text-2xl font-bold' dir='ltr'>
-                    د.ع {totalRevenue.toLocaleString('ar-IQ')}
+                    د.ع {totalRevenue?.toLocaleString('ar-IQ') ?? 0}
                   </div>
                   <p className='text-xs text-muted-foreground'>
                     {totalOrders} طلب إجمالي
