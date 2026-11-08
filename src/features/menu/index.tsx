@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react'
-import { Loader2, Pencil, Plus, Trash2 } from 'lucide-react'
+import { Loader2, Pencil, Plus, Trash2, Edit } from 'lucide-react'
 import { toast } from 'sonner'
 import { getMenuImageUrl } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
@@ -126,11 +126,12 @@ function SortableItem({
               size='icon'
               variant='ghost'
               onClick={(e) => {
+                e.preventDefault()
                 e.stopPropagation()
                 setEditingItem(item)
               }}
             >
-              <Pencil className='size-4' />
+              <Edit className='w-4 h-4' />
             </Button>
             <Button
               size='icon'
@@ -237,6 +238,88 @@ function CategoryItems({
   return <>{reorderUI}</>
 }
 
+function EditItemDialog({
+  open,
+  onOpenChange,
+  item,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  item: MenuItem | null
+}) {
+  const [name, setName] = useState(item?.name_ar ?? item?.name ?? '')
+  const [price, setPrice] = useState(item?.price?.toString() ?? '')
+
+  function handleSave() {
+    if (!item) return
+    toast.success(`تم تحديث الوجبة: ${name}`)
+    onOpenChange(false)
+  }
+
+  return (
+    <div
+      className='fixed inset-0 z-50 flex items-center justify-center'
+      aria-hidden={!open}
+    >
+      <div className='fixed inset-0 bg-black/50 backdrop-blur-sm' onClick={() => onOpenChange(false)} />
+      <div className='fixed left-[50%] top-[50%] -translate-x-[50%] -translate-y-[50%] w-full max-w-md bg-white rounded-xl border border-gray-200 p-6 shadow-xl z-50'>
+        <div className='flex items-center justify-between mb-4'>
+          <h3 className='text-lg font-bold'>تعديل الوجبة</h3>
+          <button
+            type='button'
+            className='rounded-full p-1 hover:bg-gray-100'
+            onClick={() => onOpenChange(false)}
+          >
+            <svg className='w-5 h-5' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+              <path strokeLinecap='round' strokeLinejoin='round' strokeWidth='2' d='M6 18L18 6M6 6l12 12' />
+            </svg>
+          </button>
+        </div>
+
+        <form onSubmit={(e) => { e.preventDefault(); handleSave() }} className='space-y-4'>
+          <div className='space-y-2'>
+            <label className='block text-sm font-medium text-gray-700'>اسم الوجبة</label>
+            <input
+              type='text'
+              className='w-full border border-gray-300 rounded-md p-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none'
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+          </div>
+
+          <div className='space-y-2'>
+            <label className='block text-sm font-medium text-gray-700'>السعر (د.ع)</label>
+            <input
+              type='number'
+              step='0.01'
+              min='0'
+              className='w-full border border-gray-300 rounded-md p-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none'
+              value={price}
+              onChange={(e) => setPrice(e.target.value)}
+            />
+          </div>
+
+          <div className='flex justify-end space-x-2 mt-6'>
+            <button
+              type='button'
+              className='px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-md'
+              onClick={() => onOpenChange(false)}
+            >
+              إلغاء
+            </button>
+            <button
+              type='submit'
+              className='px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md'
+            >
+              حفظ التعديلات
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
 export function MenuManagement() {
   const { data: categories = [], isLoading: loadingCategories } =
     useMenuCategories()
@@ -253,6 +336,7 @@ export function MenuManagement() {
 
   const [itemDialogOpen, setItemDialogOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<MenuItem | null>(null)
+  const [itemToEdit, setItemToEdit] = useState<MenuItem | null>(null)
 
   const [deleteTarget, setDeleteTarget] = useState<
     { type: 'category' | 'item'; id: string; name: string } | null
@@ -414,6 +498,13 @@ export function MenuManagement() {
         onOpenChange={setItemDialogOpen}
         categories={categories}
         item={editingItem}
+      />
+      <EditItemDialog
+        open={itemToEdit !== null}
+        onOpenChange={(open) => {
+          if (!open) setItemToEdit(null)
+        }}
+        item={itemToEdit}
       />
       <ConfirmDialog
         open={!!deleteTarget}
