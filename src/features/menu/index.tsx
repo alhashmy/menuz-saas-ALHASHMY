@@ -125,7 +125,8 @@ function SortableItem({
             <Button
               size='icon'
               variant='ghost'
-              onClick={() => {
+              onClick={(e) => {
+                e.stopPropagation()
                 setEditingItem(item)
               }}
             >
