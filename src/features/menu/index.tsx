@@ -67,7 +67,7 @@ function SortableItem({
   index: number
   toggleAvailability: ReturnType<typeof useToggleItemAvailability>
   setItemToEdit: (item: MenuItem | null) => void
-  setDeleteTarget: (target: { type: 'category' | 'item'; id: string; name: string } | null) => void
+  setDeleteTarget: (target: { type: 'category' | 'item'; id: string; name: string; image_path?: string | null } | null) => void
   isEditModeEnabled: boolean
   isReorderMode: boolean
 }) {
@@ -157,6 +157,7 @@ function SortableItem({
                   type: 'item',
                   id: item.id,
                   name: item.name_ar ?? item.name,
+                  image_path: item.image_path,
                 })
               }
             >
@@ -186,7 +187,7 @@ function CategoryItems({
   updateSortOrder: ReturnType<typeof useUpdateSortOrder>
   toggleAvailability: ReturnType<typeof useToggleItemAvailability>
   setItemToEdit: (item: MenuItem | null) => void
-  setDeleteTarget: (target: { type: 'category' | 'item'; id: string; name: string } | null) => void
+  setDeleteTarget: (target: { type: 'category' | 'item'; id: string; name: string; image_path?: string | null } | null) => void
   isEditModeEnabled: boolean
   isReorderMode: boolean
 }) {
@@ -281,6 +282,13 @@ function EditItemDialog({
       let finalImageUrl = item?.image_path || ''; // الاحتفاظ بالصورة القديمة
 
       if (imageFile) {
+        if (item?.image_path) {
+          const oldFileName = item.image_path.split('/').pop();
+          if (oldFileName) {
+            await supabase.storage.from('menu-images').remove([oldFileName]);
+          }
+        }
+
         // 1. توليد اسم إنجليزي عشوائي وآمن إجبارياً لمنع أخطاء الأسماء العربية
         const fileExt = imageFile.name.split('.').pop();
         const safeFileName = `img_${Date.now()}_${Math.random().toString(36).substring(2, 9)}.${fileExt}`;
@@ -424,7 +432,7 @@ export function MenuManagement() {
   const [itemToEdit, setItemToEdit] = useState<MenuItem | null>(null)
 
   const [deleteTarget, setDeleteTarget] = useState<
-    { type: 'category' | 'item'; id: string; name: string } | null
+    { type: 'category' | 'item'; id: string; name: string; image_path?: string | null } | null
   >(null)
 
   const [isReorderMode, setIsReorderMode] = useState(false)
@@ -439,6 +447,12 @@ export function MenuManagement() {
       if (deleteTarget.type === 'category') {
         await deleteCategory.mutateAsync(deleteTarget.id)
       } else {
+        if (deleteTarget.image_path) {
+          const fileName = deleteTarget.image_path.split('/').pop();
+          if (fileName) {
+            await supabase.storage.from('menu-images').remove([fileName]);
+          }
+        }
         await deleteItem.mutateAsync(deleteTarget.id)
       }
       toast.success('تم الحذف بنجاح.')
