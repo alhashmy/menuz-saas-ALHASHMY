@@ -1,6 +1,5 @@
 import { UtensilsCrossed } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { getMenuImageUrl } from '@/lib/supabase'
 import { useCartStore } from '@/stores/cart-store'
 import { Button } from '@/components/ui/button'
 import type { MenuTemplate } from '../templates/types'
@@ -104,7 +103,6 @@ export function ItemCard({
   onSelect,
   isAvailable = true,
 }: ItemCardProps) {
-  const imageUrl = getMenuImageUrl(item.image_path)
   const name = item.name_ar ?? item.name
   const desc = item.description_ar ?? item.description
   const animClass = animationClass(template)
@@ -206,9 +204,9 @@ export function ItemCard({
         <DiscountBadge offer={offer} />
         {unavailable && <UnavailableBadge />}
         <div className='relative h-40 w-full overflow-hidden rounded-xl'>
-          {imageUrl ? (
+          {item.image_path ? (
             <img
-              src={imageUrl}
+              src={item.image_path || 'رابط_صورة_افتراضية_أو_فارغ'}
               alt={name}
               className='h-40 w-full object-cover object-center rounded-t-md'
             />
@@ -241,9 +239,9 @@ export function ItemCard({
         <div className='relative h-40 w-full overflow-hidden rounded-t-xl'>
           <DiscountBadge offer={offer} />
           {unavailable && <UnavailableBadge />}
-          {imageUrl ? (
+          {item.image_path ? (
             <img
-              src={imageUrl}
+              src={item.image_path || 'رابط_صورة_افتراضية_أو_فارغ'}
               alt={name}
               className='h-40 w-full object-cover object-center rounded-t-md'
             />
@@ -278,9 +276,9 @@ export function ItemCard({
         <div className='relative h-40 w-full overflow-hidden'>
           <DiscountBadge offer={offer} />
           {unavailable && <UnavailableBadge />}
-          {imageUrl ? (
+          {item.image_path ? (
             <img
-              src={imageUrl}
+              src={item.image_path || 'رابط_صورة_افتراضية_أو_فارغ'}
               alt={name}
               className='h-40 w-full object-cover object-center rounded-t-md'
             />
@@ -319,8 +317,8 @@ export function ItemCard({
           </span>
         )}
         {unavailable && <UnavailableBadge />}
-        {imageUrl ? (
-          <img src={imageUrl} alt={name} className='h-24 w-24 object-cover object-center' />
+        {item.image_path ? (
+          <img src={item.image_path || 'رابط_صورة_افتراضية_أو_فارغ'} alt={name} className='h-24 w-24 object-cover object-center' />
         ) : (
           placeholder('sm')
         )}

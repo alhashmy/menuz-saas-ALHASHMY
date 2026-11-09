@@ -1,6 +1,5 @@
 import { Minus, Plus, ShoppingCart, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
-import { getMenuImageUrl } from '@/lib/supabase'
 import { useCartStore } from '@/stores/cart-store'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -157,13 +156,12 @@ export function CartSheet({ open, onOpenChange, restaurantId }: CartSheetProps) 
             ) : (
               <div className='flex-1 overflow-y-auto divide-y divide-border px-4'>
                 {items.map((item) => {
-                  const imageUrl = getMenuImageUrl(item.imagePath)
                   return (
                     <div key={item.id} className='flex items-center gap-3 p-3'>
                       <div className='relative shrink-0 overflow-hidden rounded-md border border-muted/40'>
-                        {imageUrl ? (
+                        {item.imagePath ? (
                           <img
-                            src={imageUrl}
+                            src={item.imagePath || 'رابط_صورة_افتراضية_أو_فارغ'}
                             alt={item.name}
                             className='w-16 h-16 object-cover object-center'
                           />

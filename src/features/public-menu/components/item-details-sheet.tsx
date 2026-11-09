@@ -1,6 +1,5 @@
 import { UtensilsCrossed } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { getMenuImageUrl } from '@/lib/supabase'
 import {
   Sheet,
   SheetContent,
@@ -29,7 +28,6 @@ export function ItemDetailsSheet({
   onOpenChange,
   isAvailable = true,
 }: ItemDetailsSheetProps) {
-  const imageUrl = item ? getMenuImageUrl(item.image_path) : null
   const { finalPrice, hasDiscount } = item
     ? applyItemOffer(item.price, offer)
     : { finalPrice: 0, hasDiscount: false }
@@ -70,9 +68,9 @@ export function ItemDetailsSheet({
                   غير متوفر
                 </Badge>
               )}
-              {imageUrl ? (
+              {item.image_path ? (
                 <img
-                  src={imageUrl}
+                  src={item.image_path || 'رابط_صورة_افتراضية_أو_فارغ'}
                   alt={item.name_ar ?? item.name}
                   className='w-full h-56 object-cover rounded-t-lg bg-gray-100'
                 />
