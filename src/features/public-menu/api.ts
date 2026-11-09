@@ -35,6 +35,14 @@ export interface PublicBranding {
   /** معرّف أحد قوالب المنيو العشرة الجاهزة */
   menu_style: string
   logo_path: string | null
+  /** نمط العرض المحفوظ من منشئ القوائم (JSONB) */
+  style: {
+    layout: 'list' | 'grid-2' | 'grid-3' | 'cards'
+    accentColor: string
+    bannerUrl: string | null
+    neonEnabled: boolean
+    neonPlacement: 'cards' | 'strips' | 'all' | null
+  } | null
 }
 
 export interface PublicItemOffer {
@@ -98,7 +106,7 @@ export function usePublicMenu(restaurantSlug: string) {
       ] = await Promise.all([
         supabase
           .from('restaurant_branding')
-          .select('primary_color, accent_color, theme_mode, menu_style, logo_path')
+          .select('primary_color, accent_color, theme_mode, menu_style, logo_path, style')
           .eq('restaurant_id', restaurant.id)
           .maybeSingle(),
         supabase

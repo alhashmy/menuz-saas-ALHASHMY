@@ -2,6 +2,7 @@ import {
   LayoutDashboard,
   ClipboardList,
   LayoutGrid,
+  Layout,
   UtensilsCrossed,
   BadgePercent,
   Palette,
@@ -50,6 +51,11 @@ export const sidebarData: SidebarData = {
           title: 'القائمة',
           url: '/menu',
           icon: UtensilsCrossed,
+        },
+        {
+          title: 'صانع القوائم',
+          url: '/menu-builder',
+          icon: Layout,
         },
         {
           title: 'العروض',

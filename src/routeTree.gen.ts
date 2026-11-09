@@ -30,6 +30,7 @@ import { Route as AuthenticatedQrCodesIndexRouteImport } from './routes/_authent
 import { Route as AuthenticatedOrdersIndexRouteImport } from './routes/_authenticated/orders/index'
 import { Route as AuthenticatedOffersIndexRouteImport } from './routes/_authenticated/offers/index'
 import { Route as AuthenticatedMenuIndexRouteImport } from './routes/_authenticated/menu/index'
+import { Route as AuthenticatedMenuBuilderIndexRouteImport } from './routes/_authenticated/menu-builder/index'
 import { Route as AuthenticatedHelpCenterIndexRouteImport } from './routes/_authenticated/help-center/index'
 import { Route as AuthenticatedDashboardIndexRouteImport } from './routes/_authenticated/dashboard/index'
 import { Route as AuthenticatedBrandingIndexRouteImport } from './routes/_authenticated/branding/index'
@@ -152,6 +153,12 @@ const AuthenticatedMenuIndexRoute = AuthenticatedMenuIndexRouteImport.update({
   path: '/menu/',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedMenuBuilderIndexRoute =
+  AuthenticatedMenuBuilderIndexRouteImport.update({
+    id: '/menu-builder/',
+    path: '/menu-builder/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedHelpCenterIndexRoute =
   AuthenticatedHelpCenterIndexRouteImport.update({
     id: '/help-center/',
@@ -243,6 +250,7 @@ export interface FileRoutesByFullPath {
   '/branding/': typeof AuthenticatedBrandingIndexRoute
   '/dashboard/': typeof AuthenticatedDashboardIndexRoute
   '/help-center/': typeof AuthenticatedHelpCenterIndexRoute
+  '/menu-builder/': typeof AuthenticatedMenuBuilderIndexRoute
   '/menu/': typeof AuthenticatedMenuIndexRoute
   '/offers/': typeof AuthenticatedOffersIndexRoute
   '/orders/': typeof AuthenticatedOrdersIndexRoute
@@ -275,6 +283,7 @@ export interface FileRoutesByTo {
   '/branding': typeof AuthenticatedBrandingIndexRoute
   '/dashboard': typeof AuthenticatedDashboardIndexRoute
   '/help-center': typeof AuthenticatedHelpCenterIndexRoute
+  '/menu-builder': typeof AuthenticatedMenuBuilderIndexRoute
   '/menu': typeof AuthenticatedMenuIndexRoute
   '/offers': typeof AuthenticatedOffersIndexRoute
   '/orders': typeof AuthenticatedOrdersIndexRoute
@@ -310,6 +319,7 @@ export interface FileRoutesById {
   '/_authenticated/branding/': typeof AuthenticatedBrandingIndexRoute
   '/_authenticated/dashboard/': typeof AuthenticatedDashboardIndexRoute
   '/_authenticated/help-center/': typeof AuthenticatedHelpCenterIndexRoute
+  '/_authenticated/menu-builder/': typeof AuthenticatedMenuBuilderIndexRoute
   '/_authenticated/menu/': typeof AuthenticatedMenuIndexRoute
   '/_authenticated/offers/': typeof AuthenticatedOffersIndexRoute
   '/_authenticated/orders/': typeof AuthenticatedOrdersIndexRoute
@@ -345,6 +355,7 @@ export interface FileRouteTypes {
     | '/branding/'
     | '/dashboard/'
     | '/help-center/'
+    | '/menu-builder/'
     | '/menu/'
     | '/offers/'
     | '/orders/'
@@ -377,6 +388,7 @@ export interface FileRouteTypes {
     | '/branding'
     | '/dashboard'
     | '/help-center'
+    | '/menu-builder'
     | '/menu'
     | '/offers'
     | '/orders'
@@ -411,6 +423,7 @@ export interface FileRouteTypes {
     | '/_authenticated/branding/'
     | '/_authenticated/dashboard/'
     | '/_authenticated/help-center/'
+    | '/_authenticated/menu-builder/'
     | '/_authenticated/menu/'
     | '/_authenticated/offers/'
     | '/_authenticated/orders/'
@@ -585,6 +598,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedMenuIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/menu-builder/': {
+      id: '/_authenticated/menu-builder/'
+      path: '/menu-builder'
+      fullPath: '/menu-builder/'
+      preLoaderRoute: typeof AuthenticatedMenuBuilderIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/help-center/': {
       id: '/_authenticated/help-center/'
       path: '/help-center'
@@ -699,6 +719,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedBrandingIndexRoute: typeof AuthenticatedBrandingIndexRoute
   AuthenticatedDashboardIndexRoute: typeof AuthenticatedDashboardIndexRoute
   AuthenticatedHelpCenterIndexRoute: typeof AuthenticatedHelpCenterIndexRoute
+  AuthenticatedMenuBuilderIndexRoute: typeof AuthenticatedMenuBuilderIndexRoute
   AuthenticatedMenuIndexRoute: typeof AuthenticatedMenuIndexRoute
   AuthenticatedOffersIndexRoute: typeof AuthenticatedOffersIndexRoute
   AuthenticatedOrdersIndexRoute: typeof AuthenticatedOrdersIndexRoute
@@ -715,6 +736,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedBrandingIndexRoute: AuthenticatedBrandingIndexRoute,
   AuthenticatedDashboardIndexRoute: AuthenticatedDashboardIndexRoute,
   AuthenticatedHelpCenterIndexRoute: AuthenticatedHelpCenterIndexRoute,
+  AuthenticatedMenuBuilderIndexRoute: AuthenticatedMenuBuilderIndexRoute,
   AuthenticatedMenuIndexRoute: AuthenticatedMenuIndexRoute,
   AuthenticatedOffersIndexRoute: AuthenticatedOffersIndexRoute,
   AuthenticatedOrdersIndexRoute: AuthenticatedOrdersIndexRoute,

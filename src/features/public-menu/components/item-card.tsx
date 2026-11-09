@@ -13,6 +13,7 @@ interface ItemCardProps {
   offer?: PublicItemOffer
   onSelect: () => void
   isAvailable?: boolean
+  neonEnabled?: boolean
 }
 
 function PriceTag({
@@ -102,6 +103,7 @@ export function ItemCard({
   offer,
   onSelect,
   isAvailable = true,
+  neonEnabled = false,
 }: ItemCardProps) {
   const name = item.name_ar ?? item.name
   const desc = item.description_ar ?? item.description
@@ -196,6 +198,7 @@ export function ItemCard({
         style={style}
         className={cn(
           'relative overflow-hidden rounded-xl border bg-card text-start shadow-sm cursor-pointer',
+          neonEnabled && 'menu-anim-cyber-neon shadow-[0_0_20px_rgba(34,211,238,0.35)] border-emerald-400/50',
           unavailable && 'opacity-60 grayscale pointer-events-none',
           template.id === 'glassmorphism' && 'menu-glass',
           animClass
@@ -232,6 +235,7 @@ export function ItemCard({
         style={style}
         className={cn(
           'relative w-full overflow-hidden rounded-xl border bg-card text-start shadow-sm cursor-pointer',
+          neonEnabled && 'menu-anim-cyber-neon shadow-[0_0_20px_rgba(34,211,238,0.35)] border-emerald-400/50',
           unavailable && 'opacity-60 grayscale pointer-events-none',
           animClass
         )}
@@ -269,6 +273,7 @@ export function ItemCard({
         style={style}
         className={cn(
           'flex flex-col overflow-hidden rounded-xl border bg-card text-start shadow-sm cursor-pointer',
+          neonEnabled && 'menu-anim-cyber-neon shadow-[0_0_20px_rgba(34,211,238,0.35)] border-emerald-400/50',
           unavailable && 'opacity-60 grayscale pointer-events-none',
           animClass
         )}
@@ -302,11 +307,12 @@ export function ItemCard({
     <div
       onClick={unavailable ? undefined : onSelect}
       style={style}
-      className={cn(
-        'flex items-center gap-4 rounded-xl border bg-card p-3 text-start shadow-sm cursor-pointer transition-transform active:scale-[0.98]',
-        unavailable && 'opacity-60 grayscale pointer-events-none',
-        animClass
-      )}
+        className={cn(
+          'flex items-center gap-4 rounded-xl border bg-card p-3 text-start shadow-sm cursor-pointer transition-transform active:scale-[0.98]',
+          neonEnabled && 'menu-anim-cyber-neon shadow-[0_0_20px_rgba(34,211,238,0.35)] border-emerald-400/50',
+          unavailable && 'opacity-60 grayscale pointer-events-none',
+          animClass
+        )}
     >
       <div className='relative shrink-0 overflow-hidden rounded-lg border border-muted/40'>
         {offer && (

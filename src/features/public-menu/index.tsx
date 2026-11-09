@@ -74,12 +74,22 @@ export function PublicMenu({ restaurantSlug }: PublicMenuProps) {
     )
   }
 
-  const primaryColor = data.branding?.primary_color ?? template.previewPrimary
-  const accentColor = data.branding?.accent_color ?? template.previewAccent
+  const primaryColor = data.branding?.style?.accentColor ?? data.branding?.accent_color ?? template.previewPrimary
+  const accentColor = data.branding?.style?.accentColor ?? data.branding?.accent_color ?? template.previewAccent
+
+  const builderStyle = data.branding?.style
+  const layout = builderStyle?.layout ?? 'list'
+  const neonEnabled = builderStyle?.neonEnabled ?? false
+  const neonPlacement = builderStyle?.neonPlacement ?? null
+  const bannerUrl = builderStyle?.bannerUrl ?? null
+  const neonCards = neonEnabled && (neonPlacement === 'cards' || neonPlacement === 'all')
+  const neonStrips = neonEnabled && (neonPlacement === 'strips' || neonPlacement === 'all')
 
   const itemsContainerClass =
-    template.cardLayout === 'grid' || template.cardLayout === 'overlay'
+    layout === 'grid-2'
       ? 'grid grid-cols-2 gap-3'
+      : layout === 'grid-3'
+      ? 'grid grid-cols-3 gap-3'
       : 'grid gap-3'
 
   return (
@@ -99,6 +109,16 @@ export function PublicMenu({ restaurantSlug }: PublicMenuProps) {
 
       <PromoBanner offers={data.orderOffers} accentColor={accentColor} />
 
+      {bannerUrl && (
+        <div className='w-full rounded-2xl overflow-hidden border border-border/50 shadow-xl shadow-black/20 mb-6'>
+          <img
+            src={bannerUrl}
+            alt='اللوحة الإعلانية'
+            className='w-full h-32 object-cover object-center'
+          />
+        </div>
+      )}
+
       {data.categories.length === 0 ? (
         <div className='flex flex-col items-center gap-2 px-4 py-16 text-center text-muted-foreground'>
           <SearchX className='size-8' />
@@ -114,41 +134,45 @@ export function PublicMenu({ restaurantSlug }: PublicMenuProps) {
             onSelect={handleSelectCategory}
           />
 
-          <main className='space-y-8 px-4 pt-4'>
-            {data.categories.map((category) => (
-              <section
-                key={category.id}
-                id={`category-${category.id}`}
-                className='scroll-mt-20'
-              >
-                <h2
-                  className={cn(template.ornamented && 'flex items-center gap-2')}
-                >
-                  {template.ornamented && (
-                    <span className='h-px flex-1 max-w-6' style={{ backgroundColor: accentColor }} />
-                  )}
-                  {category.name_ar ?? category.name}
-                  {template.ornamented && (
-                    <span className='h-px flex-1' style={{ backgroundColor: accentColor }} />
-                  )}
-                </h2>
-                <div className={itemsContainerClass}>
-                  {category.items.map((item, idx) => (
-                    <ItemCard
-                      key={item.id}
-                      item={item}
-                      accentColor={accentColor}
-                      template={template}
-                      animationDelayMs={idx * 70}
-                      offer={data.itemOffers[item.id]}
-                      isAvailable={item.is_available}
-                      onSelect={() => setSelectedItem(item)}
-                    />
-                  ))}
-                </div>
-              </section>
-            ))}
-          </main>
+              <main className='space-y-8 px-4 pt-4'>
+                {data.categories.map((category, catIdx) => (
+                  <section
+                    key={category.id}
+                    id={`category-${category.id}`}
+                    className={cn(
+                      'scroll-mt-20 relative',
+                      neonStrips && catIdx > 0 && 'pt-8 border-t border-emerald-400/40 shadow-[0_0_20px_rgba(34,211,238,0.25)]',
+                    )}
+                  >
+                    <h2
+                      className={cn(template.ornamented && 'flex items-center gap-2')}
+                    >
+                      {template.ornamented && (
+                        <span className='h-px flex-1 max-w-6' style={{ backgroundColor: accentColor }} />
+                      )}
+                      {category.name_ar ?? category.name}
+                      {template.ornamented && (
+                        <span className='h-px flex-1' style={{ backgroundColor: accentColor }} />
+                      )}
+                    </h2>
+                    <div className={itemsContainerClass}>
+                      {category.items.map((item, idx) => (
+                        <ItemCard
+                          key={item.id}
+                          item={item}
+                          accentColor={accentColor}
+                          template={template}
+                          animationDelayMs={idx * 70}
+                          offer={data.itemOffers[item.id]}
+                          isAvailable={item.is_available}
+                          onSelect={() => setSelectedItem(item)}
+                          neonEnabled={neonCards}
+                        />
+                      ))}
+                    </div>
+                  </section>
+                ))}
+              </main>
         </>
       )}
 

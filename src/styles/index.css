@@ -166,3 +166,21 @@
   -webkit-backdrop-filter: blur(14px);
   border: 1px solid color-mix(in oklab, var(--foreground) 12%, transparent);
 }
+
+/* ===================== تأثير النيون السيبراني المتحرك ===================== */
+
+@keyframes cyber-neon-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0px 0 color-mix(in oklab, var(--menu-accent, #22d3ee) 50%, transparent);
+    border-color: color-mix(in oklab, var(--menu-accent, #22d3ee) 40%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 24px 4px color-mix(in oklab, var(--menu-accent, #22d3ee) 60%, transparent);
+    border-color: color-mix(in oklab, var(--menu-accent, #22d3ee) 80%, transparent);
+  }
+}
+
+.menu-anim-cyber-neon {
+  animation: cyber-neon-pulse 2.5s ease-in-out infinite;
+}
