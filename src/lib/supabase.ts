@@ -32,7 +32,7 @@ export async function uploadMenuImage(
   file: File
 ): Promise<string> {
   const ext = file.name.split('.').pop() ?? 'jpg'
-  const path = `${restaurantId}/${folder}/${crypto.randomUUID()}.${ext}`
+  const path = `${restaurantId}/${folder}/img_${Date.now()}_${Math.random().toString(36).substring(2, 9)}.${ext}`
 
   const { error } = await supabase.storage
     .from('menu-images')

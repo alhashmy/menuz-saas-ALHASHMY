@@ -51,7 +51,7 @@ export function ItemDetailsSheet({
 
   return (
     <Sheet open={!!item} onOpenChange={onOpenChange}>
-      <SheetContent side='right' className='max-w-sm w-full h-full bg-background p-0'>
+      <SheetContent side='right' className='max-w-md w-full h-full bg-background p-0'>
         {item && (
           <>
             <div className='mx-auto mb-2 h-1.5 w-10 rounded-full bg-muted' />
@@ -74,35 +74,40 @@ export function ItemDetailsSheet({
                 <img
                   src={imageUrl}
                   alt={item.name_ar ?? item.name}
-                  className={cn('h-48 w-full rounded-xl object-cover', !isAvailable && 'opacity-60 grayscale')}
+                  className='w-full h-56 object-cover rounded-t-lg bg-gray-100'
                 />
               ) : (
-                <div className={cn('flex h-48 w-full items-center justify-center rounded-xl bg-muted text-muted-foreground', !isAvailable && 'opacity-60 grayscale')}>
+                <div className='flex h-56 w-full items-center justify-center rounded-t-lg bg-gray-100 text-muted-foreground'>
                   <UtensilsCrossed className='size-10' />
                 </div>
               )}
             </div>
 
-            <SheetHeader className='p-0 text-start'>
-              <SheetTitle className='text-xl'>{item.name_ar ?? item.name}</SheetTitle>
-              {(item.description_ar || item.description) && (
-                <SheetDescription className='text-start'>
-                  {item.description_ar ?? item.description}
-                </SheetDescription>
-              )}
-            </SheetHeader>
+            <div className='flex flex-col gap-3 p-4 flex-grow'>
+              <div className='flex items-center justify-between'>
+                <SheetHeader className='p-0 mb-0'>
+                  <SheetTitle className='text-xl' aria-describedby={undefined}>
+                    {item.name_ar ?? item.name}
+                  </SheetTitle>
+                  {(item.description_ar || item.description) && (
+                    <SheetDescription className='text-start'>
+                      {item.description_ar ?? item.description}
+                    </SheetDescription>
+                  )}
+                </SheetHeader>
+              </div>
 
-            <div className='mt-6 flex items-center justify-between'>
               <div className='flex items-baseline gap-2'>
                 <span className='text-2xl font-bold' style={{ color: accentColor }}>
                   {finalPrice.toFixed(2)} د.ع
                 </span>
                 {hasDiscount && (
-                <span className='text-sm text-muted-foreground line-through'>
-                  {item.price.toFixed(2)} د.ع
-                </span>
+                  <span className='text-sm text-muted-foreground line-through'>
+                    {item.price.toFixed(2)} د.ع
+                  </span>
                 )}
               </div>
+
               <Button
                 size='lg'
                 style={{ backgroundColor: accentColor }}

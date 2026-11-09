@@ -210,7 +210,7 @@ export function ItemCard({
             <img
               src={imageUrl}
               alt={name}
-              className='h-40 w-full object-cover object-center'
+              className='h-40 w-full object-cover object-center rounded-t-md'
             />
           ) : (
             placeholder('md')
@@ -245,7 +245,7 @@ export function ItemCard({
             <img
               src={imageUrl}
               alt={name}
-              className='h-40 w-full object-cover object-center'
+              className='h-40 w-full object-cover object-center rounded-t-md'
             />
           ) : (
             placeholder('md')
@@ -282,7 +282,7 @@ export function ItemCard({
             <img
               src={imageUrl}
               alt={name}
-              className='h-40 w-full object-cover object-center'
+              className='h-40 w-full object-cover object-center rounded-t-md'
             />
           ) : (
             placeholder('md')

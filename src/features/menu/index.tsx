@@ -1,8 +1,10 @@
 import { useCallback, useState } from 'react'
-import { Loader2, Pencil, Plus, Trash2, Edit } from 'lucide-react'
+import { Loader2, Pencil, Plus, Trash2, Edit, Settings } from 'lucide-react'
 import { toast } from 'sonner'
-import { getMenuImageUrl } from '@/lib/supabase'
+import { supabase } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
+import { useQueryClient } from '@tanstack/react-query'
+import { useAuthStore } from '@/stores/auth-store'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Header } from '@/components/layout/header'
@@ -31,24 +33,42 @@ import {
   useMenuItems,
   useToggleItemAvailability,
   useUpdateSortOrder,
+  useUpsertMenuItem,
 } from './api'
 import { CategoryDialog } from './components/category-dialog'
 import { ItemDialog } from './components/item-dialog'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 import type { MenuCategory, MenuItem } from './types'
 
 function SortableItem({
   item,
   index,
   toggleAvailability,
-  setEditingItem,
+  setItemToEdit,
   setDeleteTarget,
+  isEditModeEnabled,
   isReorderMode,
 }: {
   item: MenuItem
   index: number
   toggleAvailability: ReturnType<typeof useToggleItemAvailability>
-  setEditingItem: (item: MenuItem | null) => void
+  setItemToEdit: (item: MenuItem | null) => void
   setDeleteTarget: (target: { type: 'category' | 'item'; id: string; name: string } | null) => void
+  isEditModeEnabled: boolean
   isReorderMode: boolean
 }) {
   const { attributes, listeners, setNodeRef, transform, transition } =
@@ -84,15 +104,11 @@ function SortableItem({
             {index + 1}
           </div>
           <div className='relative shrink-0 overflow-hidden rounded-md border border-muted/40'>
-            {item.image_path ? (
-              <img
-                src={getMenuImageUrl(item.image_path) ?? ''}
-                alt={item.name_ar ?? item.name}
-                className='size-10 object-cover object-center'
-              />
-            ) : (
-              <div className='size-10 rounded-md border bg-muted' />
-            )}
+            <img
+              src={item.image_path || 'رابط_صورة_افتراضية_أو_فارغ'}
+              alt={item.name}
+              className='size-10 object-cover object-center'
+            />
           </div>
           <div>
             <p className='font-medium truncate'>{item.name_ar ?? item.name}</p>
@@ -101,7 +117,7 @@ function SortableItem({
             </p>
           </div>
         </div>
-        {!isReorderMode && (
+        {(isEditModeEnabled || isReorderMode) && (
           <div className='flex items-center gap-2'>
             <Switch
               checked={item.is_available}
@@ -128,7 +144,7 @@ function SortableItem({
               onClick={(e) => {
                 e.preventDefault()
                 e.stopPropagation()
-                setEditingItem(item)
+                setItemToEdit(item)
               }}
             >
               <Edit className='w-4 h-4' />
@@ -159,8 +175,9 @@ function CategoryItems({
   sensors,
   updateSortOrder,
   toggleAvailability,
-  setEditingItem,
+  setItemToEdit,
   setDeleteTarget,
+  isEditModeEnabled,
   isReorderMode,
 }: {
   category: MenuCategory
@@ -168,8 +185,9 @@ function CategoryItems({
   sensors: ReturnType<typeof useSensors>
   updateSortOrder: ReturnType<typeof useUpdateSortOrder>
   toggleAvailability: ReturnType<typeof useToggleItemAvailability>
-  setEditingItem: (item: MenuItem | null) => void
+  setItemToEdit: (item: MenuItem | null) => void
   setDeleteTarget: (target: { type: 'category' | 'item'; id: string; name: string } | null) => void
+  isEditModeEnabled: boolean
   isReorderMode: boolean
 }) {
   const sortedItems = items
@@ -211,8 +229,9 @@ function CategoryItems({
               item={item}
               index={index}
               toggleAvailability={toggleAvailability}
-              setEditingItem={setEditingItem}
+              setItemToEdit={setItemToEdit}
               setDeleteTarget={setDeleteTarget}
+              isEditModeEnabled={isEditModeEnabled}
               isReorderMode={true}
             />
           ))}
@@ -227,8 +246,9 @@ function CategoryItems({
           item={item}
           index={index}
           toggleAvailability={toggleAvailability}
-          setEditingItem={setEditingItem}
+          setItemToEdit={setItemToEdit}
           setDeleteTarget={setDeleteTarget}
+          isEditModeEnabled={isEditModeEnabled}
           isReorderMode={false}
         />
       ))}
@@ -247,78 +267,141 @@ function EditItemDialog({
   onOpenChange: (open: boolean) => void
   item: MenuItem | null
 }) {
-  const [name, setName] = useState(item?.name_ar ?? item?.name ?? '')
-  const [price, setPrice] = useState(item?.price?.toString() ?? '')
+  const upsertMenuItem = useUpsertMenuItem()
+  const queryClient = useQueryClient()
+  const restaurantId = useAuthStore((s) => s.restaurant?.id)
 
-  function handleSave() {
-    if (!item) return
-    toast.success(`تم تحديث الوجبة: ${name}`)
-    onOpenChange(false)
+  const [nameAr, setNameAr] = useState(item?.name_ar ?? '')
+  const [price, setPrice] = useState(item?.price?.toString() ?? '')
+  const [description, setDescription] = useState(item?.description || '')
+  const [imageFile, setImageFile] = useState<File | null>(null)
+
+  const handleSave = async () => {
+    try {
+      let finalImageUrl = item?.image_path || ''; // الاحتفاظ بالصورة القديمة
+
+      if (imageFile) {
+        // 1. توليد اسم إنجليزي عشوائي وآمن إجبارياً لمنع أخطاء الأسماء العربية
+        const fileExt = imageFile.name.split('.').pop();
+        const safeFileName = `img_${Date.now()}_${Math.random().toString(36).substring(2, 9)}.${fileExt}`;
+        
+        // 2. الرفع إلى Supabase
+        const { error: uploadError } = await supabase.storage
+          .from('menu-images')
+          .upload(safeFileName, imageFile);
+          
+        if (uploadError) {
+          alert("فشل الرفع إلى الخادم: " + uploadError.message); // تنبيه للمستخدم
+          return;
+        }
+
+        // 3. بناء الرابط الكامل (Absolute URL) يدوياً لمنع أخطاء المتصفح
+        const SUPABASE_PROJECT_URL = 'https://fcwxelswjoiwndlzqhys.supabase.co';
+        finalImageUrl = `${SUPABASE_PROJECT_URL}/storage/v1/object/public/menu-images/${safeFileName}`;
+      }
+
+      // 4. تحديث قاعدة البيانات
+      const { data, error: dbError } = await supabase
+        .from('menu_items') // تأكد من أن اسم الجدول صحيح
+        .update({
+          name: nameAr,
+          price: price,
+          description: description,
+          image_path: finalImageUrl
+        })
+        .eq('id', item?.id)
+        .select();
+
+      if (dbError) {
+        alert("فشل تحديث البيانات: " + dbError.message);
+        return;
+      }
+
+      if (!data || data.length === 0) {
+        alert("تحذير: لم يتم تعديل أي صف! قد يكون هناك حظر RLS يمنع الـ UPDATE على جدول menu_items.");
+        return;
+      }
+
+      // 5. التنظيف والإغلاق
+      setImageFile(null);
+      onOpenChange(false);
+
+      alert("تم التحديث بنجاح!");
+      queryClient.invalidateQueries({ queryKey: ['menu-items', restaurantId] })
+
+    } catch (_error) {
+      alert("حدث خطأ غير متوقع!");
+    }
   }
 
   return (
-    open ? (
-      <div
-        className='fixed inset-0 z-50 flex items-center justify-center'
-        aria-hidden={!open}
-      >
-        <div className='fixed inset-0 bg-black/50 backdrop-blur-sm' onClick={() => onOpenChange(false)} />
-        <div className='fixed left-[50%] top-[50%] -translate-x-[50%] -translate-y-[50%] w-full max-w-md bg-white rounded-xl border border-gray-200 p-6 shadow-xl z-50'>
-          <div className='flex items-center justify-between mb-4'>
-            <h3 className='text-lg font-bold'>تعديل الوجبة</h3>
-            <button
-              type='button'
-              className='rounded-full p-1 hover:bg-gray-100'
-              onClick={() => onOpenChange(false)}
-            >
-              <svg className='w-5 h-5' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
-                <path strokeLinecap='round' strokeLinejoin='round' strokeWidth='2' d='M6 18L18 6M6 6l12 12' />
-              </svg>
-            </button>
+        <Dialog open={open} onOpenChange={(open) => {
+          if (!open) setImageFile(null)
+          onOpenChange(open)
+        }}>
+      <DialogContent className='max-w-md'>
+        <DialogHeader>
+          <DialogTitle>تعديل الوجبة</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={(e) => { e.preventDefault(); handleSave() }} className='space-y-6'>
+          <div className='space-y-2'>
+            <Label>اسم الوجبة (عربي)</Label>
+            <Input
+              type='text'
+              placeholder='اسم الوجبة بالعربية'
+              defaultValue={nameAr}
+              onChange={(e) => setNameAr(e.target.value)}
+              required
+            />
           </div>
-
-          <form onSubmit={(e) => { e.preventDefault(); handleSave() }} className='space-y-4'>
-            <div className='space-y-2'>
-              <label className='block text-sm font-medium text-gray-700'>اسم الوجبة</label>
-              <input
-                type='text'
-                className='w-full border border-gray-300 rounded-md p-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none'
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-              />
-            </div>
-
-            <div className='space-y-2'>
-              <label className='block text-sm font-medium text-gray-700'>السعر (د.ع)</label>
-              <input
-                type='number'
-                step='0.01'
-                min='0'
-                className='w-full border border-gray-300 rounded-md p-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none'
-                value={price}
-                onChange={(e) => setPrice(e.target.value)}
-              />
-            </div>
-
-            <div className='flex justify-end space-x-2 mt-6'>
-              <button
-                type='button'
-                className='px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-md'
-                onClick={() => onOpenChange(false)}
-              >
-                إلغاء
-              </button>
-              <button
-                type='submit'
-                className='px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md'
-              >
-                حفظ التعديلات
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-    ) : null
+          <div className='space-y-2'>
+            <Label>السعر (د.ع)</Label>
+            <Input
+              type='number'
+              step='0.01'
+              min='0'
+              placeholder='0.00'
+              defaultValue={price}
+              onChange={(e) => setPrice(e.target.value)}
+              required
+            />
+          </div>
+          <div className='space-y-2'>
+            <Label>الوصف (عربي)</Label>
+            <Textarea
+              placeholder='وصف الوجبة بالعربية'
+              defaultValue={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={2}
+            />
+          </div>
+          <div className='space-y-2'>
+            <Label>صورة الوجبة</Label>
+            <Input
+              type='file'
+              accept='image/*'
+              onChange={(e) => setImageFile(e.target.files?.[0] || null)}
+            />
+          </div>
+          <div className='flex justify-end space-x-2 mt-6'>
+            <Button
+              type='button'
+              variant='outline'
+              onClick={() => onOpenChange(false)}
+              disabled={upsertMenuItem.isPending}
+            >
+              إلغاء
+            </Button>
+            <Button
+              type='submit'
+              disabled={upsertMenuItem.isPending}
+            >
+              {upsertMenuItem.isPending ? 'جاري الحفظ...' : 'حفظ التعديلات'}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
   )
 }
 
@@ -345,6 +428,7 @@ export function MenuManagement() {
   >(null)
 
   const [isReorderMode, setIsReorderMode] = useState(false)
+  const [isEditModeEnabled, setIsEditModeEnabled] = useState(false)
 
   const isLoading = loadingCategories || loadingItems
   const sensors = useSensors(useSensor(PointerSensor))
@@ -390,17 +474,28 @@ export function MenuManagement() {
             </p>
           </div>
           <div className='flex gap-2 items-center'>
-            <Button
-              variant='outline'
-              size='sm'
-              className={cn(
-                'flex items-center gap-1.5',
-                isReorderMode && 'bg-primary text-primary-foreground'
-              )}
-              onClick={() => handleToggleReorderMode(!isReorderMode)}
-            >
-              {isReorderMode ? 'إنهاء التعديل' : 'تعديل الأماكن'}
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant='outline' size='sm' className='flex items-center gap-1.5'>
+                  <Settings className='size-4' />
+                  إعدادات القائمة
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuItem onClick={() => handleToggleReorderMode(!isReorderMode)}>
+                  تعديل الأماكن
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => {
+                  setEditingCategory(null)
+                  setCategoryDialogOpen(true)
+                }}>
+                  إدارة الأصناف
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setIsEditModeEnabled(!isEditModeEnabled)}>
+                  تفعيل وضع التعديل للوجبات
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Button
               variant='outline'
               onClick={() => {
@@ -479,8 +574,9 @@ export function MenuManagement() {
                     sensors={sensors}
                     updateSortOrder={updateSortOrder}
                     toggleAvailability={toggleAvailability}
-                    setEditingItem={setEditingItem}
+                    setItemToEdit={setItemToEdit}
                     setDeleteTarget={setDeleteTarget}
+                    isEditModeEnabled={isEditModeEnabled}
                     isReorderMode={isReorderMode}
                   />
                 </div>
@@ -502,6 +598,7 @@ export function MenuManagement() {
         item={editingItem}
       />
       <EditItemDialog
+        key={itemToEdit?.id}
         open={itemToEdit !== null}
         onOpenChange={(open) => {
           if (!open) setItemToEdit(null)

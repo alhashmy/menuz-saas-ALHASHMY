@@ -98,7 +98,7 @@ export function useMenuItems() {
 export interface UpsertMenuItemInput {
   id?: string
   category_id: string
-  name: string
+  name?: string
   name_ar?: string
   description?: string
   description_ar?: string

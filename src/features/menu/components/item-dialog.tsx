@@ -37,7 +37,6 @@ import type { MenuCategory, MenuItem } from '../types'
 const schema = z.object({
   category_id: z.string().min(1, 'الرجاء اختيار القسم.'),
   name_ar: z.string().min(1, 'اسم الوجبة بالعربية مطلوب.'),
-  name: z.string().min(1, 'اسم الوجبة بالإنجليزية مطلوب.'),
   description_ar: z.string().optional(),
   description: z.string().optional(),
   price: z
@@ -73,7 +72,6 @@ export function ItemDialog({
     defaultValues: {
       category_id: '',
       name_ar: '',
-      name: '',
       description_ar: '',
       description: '',
       price: '0',
@@ -85,7 +83,6 @@ export function ItemDialog({
       form.reset({
         category_id: item?.category_id ?? categories[0]?.id ?? '',
         name_ar: item?.name_ar ?? '',
-        name: item?.name ?? '',
         description_ar: item?.description_ar ?? '',
         description: item?.description ?? '',
         price: item ? String(item.price) : '0',
@@ -98,16 +95,22 @@ export function ItemDialog({
 
   async function onSubmit(values: z.infer<typeof schema>) {
     try {
-      let finalImagePath = imagePath
+      let finalImageUrl = imagePath
       if (imageFile && restaurantId) {
-        finalImagePath = await uploadMenuImage(restaurantId, 'items', imageFile)
+        const uploadedPath = await uploadMenuImage(restaurantId, 'items', imageFile)
+        const SUPABASE_PROJECT_URL = 'https://fcwxelswjoiwndlzqhys.supabase.co'
+        finalImageUrl = `${SUPABASE_PROJECT_URL}/storage/v1/object/public/menu-images/${uploadedPath}`
       }
 
       await upsertItem.mutateAsync({
         id: item?.id,
         ...values,
+        name: values.name_ar ?? '',
+        name_ar: values.name_ar,
+        description: values.description_ar ?? '',
+        description_ar: values.description_ar,
         price: Number(values.price),
-        image_path: finalImagePath,
+        image_path: finalImageUrl,
       })
       toast.success(isEdit ? 'تم تحديث الوجبة.' : 'تم إضافة الوجبة.')
       onOpenChange(false)
@@ -153,34 +156,19 @@ export function ItemDialog({
               )}
             />
 
-            <div className='grid grid-cols-2 gap-3'>
-              <FormField
-                control={form.control}
-                name='name_ar'
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>الاسم (عربي)</FormLabel>
-                    <FormControl>
-                      <Input placeholder='برجر لحم' {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name='name'
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>الاسم (إنجليزي)</FormLabel>
-                    <FormControl>
-                      <Input placeholder='Beef Burger' {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+            <FormField
+              control={form.control}
+              name='name_ar'
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>الاسم (عربي)</FormLabel>
+                  <FormControl>
+                    <Input placeholder='برجر لحم' {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <FormField
               control={form.control}

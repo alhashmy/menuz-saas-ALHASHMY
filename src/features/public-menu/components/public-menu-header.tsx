@@ -38,6 +38,7 @@ export function PublicMenuHeader({
           type='button'
           size='sm'
           variant='outline'
+          className='text-white border-white/40 hover:bg-white/30'
           onClick={onCartToggle}
         >
           <ShoppingCart className='size-4 mr-1' />
@@ -70,7 +71,7 @@ export function PublicMenuHeader({
           </div>
         )}
         <div className='mt-4 flex justify-center'>
-          <Button type='button' size='sm' variant='outline' onClick={onCartToggle}>
+          <Button type='button' size='sm' variant='outline' className='text-white border-white/40 hover:bg-white/30' onClick={onCartToggle}>
             <ShoppingCart className='size-4 mr-1' />
             سلة ({cartCount})
           </Button>
@@ -95,7 +96,7 @@ export function PublicMenuHeader({
               <UtensilsCrossed className='size-5' />
             </div>
           )}
-          <Button type='button' size='sm' variant='outline' onClick={onCartToggle}>
+          <Button type='button' size='sm' variant='outline' className='text-white border-white/40 hover:bg-white/30' onClick={onCartToggle}>
             <ShoppingCart className='size-4 mr-1' />
             سلة ({cartCount})
           </Button>
@@ -130,7 +131,7 @@ export function PublicMenuHeader({
         )}
         <h1 className='text-2xl font-bold tracking-wide'>{restaurantName}</h1>
         <div className='mt-4 flex justify-center'>
-          <Button type='button' size='sm' variant='outline' onClick={onCartToggle}>
+          <Button type='button' size='sm' variant='outline' className='text-white border-white/40 hover:bg-white/30' onClick={onCartToggle}>
             <ShoppingCart className='size-4 mr-1' />
             سلة ({cartCount})
           </Button>
