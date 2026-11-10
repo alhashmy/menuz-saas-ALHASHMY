@@ -39,9 +39,8 @@ export interface PublicBranding {
   style: {
     layout: 'list' | 'grid-2' | 'grid-3' | 'cards'
     accentColor: string
-    bannerUrl: string | null
+    bannerUrls: string[]
     neonEnabled: boolean
-    neonPlacement: 'cards' | 'strips' | 'all' | null
   } | null
 }
 

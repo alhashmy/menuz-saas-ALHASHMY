@@ -18,28 +18,22 @@ import { GripVertical, Trash2, Edit, Link } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { useMenuBuilderStore } from '../store'
-import type { DraftCategory, DraftItem, MenuLayout, NeonPlacement } from '../types'
+import type { DraftCategory, DraftItem, MenuLayout } from '../types'
 
 function SortableCategory({
   item,
   index,
-  layout,
   onEdit,
   onDelete,
   onItemClick,
   accentColor,
-  neonEnabled,
-  neonPlacement,
 }: {
   item: DraftCategory
   index: number
-  layout: MenuLayout
   onEdit: (id: string) => void
   onDelete: (id: string) => void
   onItemClick: (id: string) => void
   accentColor: string
-  neonEnabled: boolean
-  neonPlacement: NeonPlacement
 }) {
   const { attributes, listeners, setNodeRef, transform, transition } =
     useSortable({ id: item.id })
@@ -54,8 +48,7 @@ function SortableCategory({
     .filter((i) => i.category_id === item.id && !i._isDeleted)
     .sort((a, b) => a.sort_order - b.sort_order)
 
-  const isGrid = layout === 'grid-2' || layout === 'grid-3'
-  const neonStrips = neonEnabled && (neonPlacement === 'strips' || neonPlacement === 'all')
+  const currentLayout = (store.style?.layout ?? 'grid-2') as 'list' | 'grid-2' | 'grid-3' | 'cards'
 
   return (
     <div
@@ -65,8 +58,6 @@ function SortableCategory({
       {...listeners}
       className={cn(
         'rounded-xl border border-white/5 bg-white/5 p-4 mb-3 shadow-lg shadow-black/20',
-        neonStrips && 'shadow-[0_0_20px_rgba(34,211,238,0.35)] border-emerald-400/50',
-        neonEnabled && 'menu-anim-cyber-neon',
         !item.is_active && 'opacity-40 grayscale'
       )}
     >
@@ -98,36 +89,43 @@ function SortableCategory({
       </div>
 
       <h3 className={cn(
-        'px-2 text-sm font-semibold mb-3 truncate',
-        neonEnabled && 'text-slate-100 drop-shadow-[0_0_8px_rgba(34,211,238,0.6)]'
+        'px-2 text-sm font-semibold mb-3 truncate'
       )}>
         {item.name_ar ?? item.name}
       </h3>
 
-      {isGrid ? (
+      {currentLayout === 'grid-2' ? (
         <div className='grid grid-cols-2 gap-2.5 px-2'>
           {categoryItems.map((item) => (
             <SortableItem
               key={item.id}
               item={item}
-              layout={layout}
+              layout={currentLayout}
               accentColor={accentColor}
-              neonEnabled={neonEnabled}
-              neonPlacement={neonPlacement}
+              onClick={() => onItemClick(item.id)}
+            />
+          ))}
+        </div>
+      ) : currentLayout === 'grid-3' ? (
+        <div className='grid grid-cols-3 gap-2.5 px-2'>
+          {categoryItems.map((item) => (
+            <SortableItem
+              key={item.id}
+              item={item}
+              layout={currentLayout}
+              accentColor={accentColor}
               onClick={() => onItemClick(item.id)}
             />
           ))}
         </div>
       ) : (
-        <div className='space-y-1.5 px-2'>
+        <div className='grid grid-cols-1 gap-2.5 px-2'>
           {categoryItems.map((item) => (
             <SortableItem
               key={item.id}
               item={item}
-              layout={layout}
+              layout={currentLayout}
               accentColor={accentColor}
-              neonEnabled={neonEnabled}
-              neonPlacement={neonPlacement}
               onClick={() => onItemClick(item.id)}
             />
           ))}
@@ -138,10 +136,7 @@ function SortableCategory({
         variant='outline'
         size='sm'
         onClick={() => store.addItem(item.id)}
-        className={cn(
-          'w-full mt-3 py-1.5 text-xs border-white/10 hover:bg-white/5',
-          neonEnabled && 'border-[1px] border-emerald-500/50 text-emerald-400 hover:bg-emerald-500/10'
-        )}
+        className='w-full mt-3 py-1.5 text-xs border-white/10 hover:bg-white/5'
       >
         <Link className='size-3.5 mr-1.5' /> إضافة وجبة
       </Button>
@@ -153,15 +148,11 @@ function SortableItem({
   item,
   layout,
   accentColor,
-  neonEnabled,
-  neonPlacement,
   onClick,
 }: {
   item: DraftItem
   layout: MenuLayout
   accentColor: string
-  neonEnabled: boolean
-  neonPlacement: NeonPlacement
   onClick: (id: string) => void
 }) {
   const { attributes, listeners, setNodeRef, transform, transition } =
@@ -172,8 +163,6 @@ function SortableItem({
     transition,
   }
 
-  const neonCards = neonEnabled && (neonPlacement === 'cards' || neonPlacement === 'all')
-
   return (
     <div
       ref={setNodeRef}
@@ -183,9 +172,7 @@ function SortableItem({
       className={cn(
         'flex flex-col gap-1.5 p-2.5 rounded-lg transition-colors border',
         layout === 'grid-2' || layout === 'grid-3' ? 'h-32' : '',
-        neonCards
-          ? 'bg-white/5 border-[1px] border-emerald-400/60 shadow-[0_0_15px_rgba(34,211,238,0.3)] text-slate-100 menu-anim-cyber-neon'
-          : item.is_available
+        item.is_available
           ? 'bg-white/5 border-white/10 text-slate-100 hover:bg-white/10'
           : 'bg-white/5 border-white/5 text-slate-500 opacity-60'
       )}
@@ -198,9 +185,6 @@ function SortableItem({
             {item.sort_order + 1}
           </span>
         </div>
-        {neonEnabled && (
-          <div className='w-1 h-1 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.8)]' />
-        )}
       </div>
 
       {item.image_path && (
@@ -241,7 +225,7 @@ function SortableItem({
 interface MobileCanvasProps {
   categories: DraftCategory[]
   items: DraftItem[]
-  style: { layout: MenuLayout; accentColor: string; bannerUrl: string | null; neonEnabled: boolean; neonPlacement: NeonPlacement }
+  style: { layout: MenuLayout; accentColor: string; bannerUrls: string[]; neonEnabled: boolean; neonColor: string }
   onCategoryEdit: (id: string) => void
   onCategoryDelete: (id: string) => void
   onItemClick: (id: string) => void
@@ -259,7 +243,7 @@ export function MobileCanvas({
   onReorderCategories,
   onReorderItems,
 }: MobileCanvasProps) {
-  const { layout, accentColor, bannerUrl, neonEnabled, neonPlacement } = style
+  const { accentColor, bannerUrls, neonEnabled, neonColor, backgroundColor } = style
   const sensors = useSensors(useSensor(PointerSensor))
   const orderedCategories = [...categories].sort(
     (a, b) => a.sort_order - b.sort_order
@@ -314,14 +298,26 @@ export function MobileCanvas({
           </div>
 
           {/* محتوى المنيو داخل الهاتف */}
-          <div className='p-4 overflow-y-auto h-full'>
-            {bannerUrl && (
-              <div className='mb-3 rounded-xl overflow-hidden border border-white/10 shadow-lg shadow-black/30'>
+          <div className={cn('p-4 overflow-y-auto h-full', neonEnabled && 'neon-frame')} style={{ '--neon-glow': neonColor, '--bg': 'var(--background)', backgroundColor }}>
+            {(bannerUrls || []).length > 0 && (
+              <div className='relative w-full aspect-[16/9] max-h-[240px] overflow-hidden rounded-b-3xl mb-4'>
                 <img
-                  src={bannerUrl}
+                  src={bannerUrls[0]}
                   alt='اللوحة الإعلانية'
-                  className='w-full h-20 object-cover object-center'
+                  className='w-full h-full object-cover'
                 />
+                {(bannerUrls || []).length > 1 && (
+                  <div className='absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5'>
+                    {(bannerUrls || []).map((_url: string, i: number) => (
+                      <div
+                        key={i}
+                        className={`w-1.5 h-1.5 rounded-full ${
+                          i === 0 ? 'bg-emerald-500' : 'bg-white/20'
+                        }`}
+                      />
+                    ))}
+                  </div>
+                )}
               </div>
             )}
             <SortableContext items={orderedCategories.map((c) => c.id)}>
@@ -336,10 +332,7 @@ export function MobileCanvas({
                     key={cat.id}
                     item={cat}
                     index={index}
-                    layout={layout}
                     accentColor={accentColor}
-                    neonEnabled={neonEnabled}
-                    neonPlacement={neonPlacement}
                     onEdit={onCategoryEdit}
                     onDelete={onCategoryDelete}
                     onItemClick={onItemClick}

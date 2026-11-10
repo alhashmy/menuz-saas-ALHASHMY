@@ -35,7 +35,7 @@ import {
 
 export function NavGroup({ title, items }: NavGroupProps) {
   const { state, isMobile } = useSidebar()
-  const href = useLocation({ select: (location) => location.href })
+  const href = useLocation({ select: (location) => location.href ?? '' })
   return (
     <SidebarGroup>
       <SidebarGroupLabel>{title}</SidebarGroupLabel>
@@ -62,7 +62,7 @@ function NavBadge({ children }: { children: ReactNode }) {
   return <Badge className='rounded-full px-1 py-0 text-xs'>{children}</Badge>
 }
 
-function SidebarMenuLink({ item, href }: { item: NavLink; href: string }) {
+function SidebarMenuLink({ item, href }: { item: NavLink; href: string | undefined }) {
   const { setOpenMobile } = useSidebar()
   return (
     <SidebarMenuItem>
@@ -86,7 +86,7 @@ function SidebarMenuCollapsible({
   href,
 }: {
   item: NavCollapsible
-  href: string
+  href: string | undefined
 }) {
   const { setOpenMobile } = useSidebar()
   return (
@@ -132,7 +132,7 @@ function SidebarMenuCollapsedDropdown({
   href,
 }: {
   item: NavCollapsible
-  href: string
+  href: string | undefined
 }) {
   return (
     <SidebarMenuItem>
@@ -173,11 +173,12 @@ function SidebarMenuCollapsedDropdown({
   )
 }
 
-function checkIsActive(href: string, item: NavItem, mainNav = false) {
+function checkIsActive(href: string | undefined, item: NavItem, mainNav = false) {
+  if (!href || !item?.url) return false
   return (
-    href === item.url || // /endpint?search=param
-    href.split('?')[0] === item.url || // endpoint
-    !!item?.items?.filter((i) => i.url === href).length || // if child nav is active
+    href === item.url ||
+    href.split('?')[0] === item.url ||
+    !!item?.items?.filter((i) => i?.url === href).length ||
     (mainNav &&
       href.split('/')[1] !== '' &&
       href.split('/')[1] === item?.url?.split('/')[1])

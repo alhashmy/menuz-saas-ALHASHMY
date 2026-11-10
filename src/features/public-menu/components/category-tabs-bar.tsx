@@ -18,8 +18,8 @@ export function CategoryTabsBar({
   onSelect,
 }: CategoryTabsBarProps) {
   return (
-    <div className='sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80'>
-      <div className='scrollbar-none flex gap-2 overflow-x-auto px-4 py-3'>
+    <div className='sticky top-0 z-40 border-b bg-slate-950/80 backdrop-blur-md'>
+      <div className='scrollbar-none flex gap-3 overflow-x-auto whitespace-nowrap px-4 py-4'>
         {categories.map((cat) => {
           const isActive = cat.id === activeId
           const label = cat.name_ar ?? cat.name

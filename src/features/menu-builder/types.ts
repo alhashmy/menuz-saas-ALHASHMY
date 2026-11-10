@@ -24,14 +24,13 @@ export interface DraftItem {
 
 export type MenuLayout = 'list' | 'grid-2' | 'grid-3' | 'cards'
 
-export type NeonPlacement = 'cards' | 'strips' | 'all' | null
-
 export interface MenuStyle {
   layout: MenuLayout
   accentColor: string
-  bannerUrl: string | null
+  bannerUrls: string[]
   neonEnabled: boolean
-  neonPlacement: NeonPlacement
+  neonColor: string
+  backgroundColor: string
 }
 
 export interface MenuDraft {

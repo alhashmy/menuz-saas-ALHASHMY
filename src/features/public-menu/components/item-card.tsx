@@ -13,7 +13,6 @@ interface ItemCardProps {
   offer?: PublicItemOffer
   onSelect: () => void
   isAvailable?: boolean
-  neonEnabled?: boolean
 }
 
 function PriceTag({
@@ -103,13 +102,11 @@ export function ItemCard({
   offer,
   onSelect,
   isAvailable = true,
-  neonEnabled = false,
 }: ItemCardProps) {
   const name = item.name_ar ?? item.name
   const desc = item.description_ar ?? item.description
   const animClass = animationClass(template)
   const style = {
-    ['--menu-accent' as string]: accentColor,
     animationDelay: `${animationDelayMs}ms`,
   }
   const unavailable = !isAvailable
@@ -139,6 +136,8 @@ export function ItemCard({
     decreaseQuantity(item.id)
   }
 
+  const isCompact = template.cardLayout === 'grid' || template.cardLayout === 'magazine'
+
   function renderButtonArea() {
     return (
       <div className='mt-auto pt-4 w-full'>
@@ -146,14 +145,17 @@ export function ItemCard({
             <Button
               type='button'
               size='sm'
-              className='w-full font-bold text-md py-2'
+              className={cn(
+                'w-full truncate py-1.5 px-2 text-xs font-bold',
+                isCompact ? 'text-[10px] leading-tight' : 'text-md',
+              )}
               disabled={unavailable}
               onClick={(e) => {
                 e.stopPropagation()
                 addToCart()
               }}
             >
-              + إضافة إلى الطلب
+              {isCompact ? '+ أضف' : '+ إضافة إلى الطلب'}
             </Button>
         ) : (
           <div className='flex items-center justify-between bg-muted rounded-md p-1 w-full border'>
@@ -197,8 +199,7 @@ export function ItemCard({
         onClick={unavailable ? undefined : onSelect}
         style={style}
         className={cn(
-          'relative overflow-hidden rounded-xl border bg-card text-start shadow-sm cursor-pointer',
-          neonEnabled && 'menu-anim-cyber-neon shadow-[0_0_20px_rgba(34,211,238,0.35)] border-emerald-400/50',
+          'relative rounded-xl border bg-card text-start shadow-sm cursor-pointer',
           unavailable && 'opacity-60 grayscale pointer-events-none',
           template.id === 'glassmorphism' && 'menu-glass',
           animClass
@@ -211,7 +212,7 @@ export function ItemCard({
             <img
               src={item.image_path || 'رابط_صورة_افتراضية_أو_فارغ'}
               alt={name}
-              className='h-40 w-full object-cover object-center rounded-t-md'
+              className='w-full h-48 md:h-56 object-cover rounded-t-xl'
             />
           ) : (
             placeholder('md')
@@ -234,8 +235,7 @@ export function ItemCard({
         onClick={unavailable ? undefined : onSelect}
         style={style}
         className={cn(
-          'relative w-full overflow-hidden rounded-xl border bg-card text-start shadow-sm cursor-pointer',
-          neonEnabled && 'menu-anim-cyber-neon shadow-[0_0_20px_rgba(34,211,238,0.35)] border-emerald-400/50',
+          'relative w-full rounded-xl border bg-card text-start shadow-sm cursor-pointer',
           unavailable && 'opacity-60 grayscale pointer-events-none',
           animClass
         )}
@@ -247,7 +247,7 @@ export function ItemCard({
             <img
               src={item.image_path || 'رابط_صورة_افتراضية_أو_فارغ'}
               alt={name}
-              className='h-40 w-full object-cover object-center rounded-t-md'
+              className='w-full h-48 md:h-56 object-cover rounded-t-xl'
             />
           ) : (
             placeholder('md')
@@ -272,8 +272,7 @@ export function ItemCard({
         onClick={unavailable ? undefined : onSelect}
         style={style}
         className={cn(
-          'flex flex-col overflow-hidden rounded-xl border bg-card text-start shadow-sm cursor-pointer',
-          neonEnabled && 'menu-anim-cyber-neon shadow-[0_0_20px_rgba(34,211,238,0.35)] border-emerald-400/50',
+          'flex flex-col rounded-xl border bg-card text-start shadow-sm cursor-pointer',
           unavailable && 'opacity-60 grayscale pointer-events-none',
           animClass
         )}
@@ -285,7 +284,7 @@ export function ItemCard({
             <img
               src={item.image_path || 'رابط_صورة_افتراضية_أو_فارغ'}
               alt={name}
-              className='h-40 w-full object-cover object-center rounded-t-md'
+              className='w-full h-48 md:h-56 object-cover rounded-t-xl'
             />
           ) : (
             placeholder('md')
@@ -309,7 +308,6 @@ export function ItemCard({
       style={style}
         className={cn(
           'flex items-center gap-4 rounded-xl border bg-card p-3 text-start shadow-sm cursor-pointer transition-transform active:scale-[0.98]',
-          neonEnabled && 'menu-anim-cyber-neon shadow-[0_0_20px_rgba(34,211,238,0.35)] border-emerald-400/50',
           unavailable && 'opacity-60 grayscale pointer-events-none',
           animClass
         )}

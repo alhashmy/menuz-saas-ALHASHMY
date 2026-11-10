@@ -6,6 +6,7 @@ import type {
   MenuBuilderPublishResult,
   MenuDraft,
   MenuStyle,
+  NeonAnimation,
 } from './types'
 
 function tempId(prefix = 'temp') {
@@ -28,6 +29,11 @@ interface MenuBuilderState {
   load: (draft: MenuDraft) => void
   reset: () => void
   setMenuStyle: (patch: Partial<MenuStyle>) => void
+  setBannerUrls: (urls: string[]) => void
+  addBannerUrl: (url: string) => void
+  removeBannerUrl: (url: string) => void
+  setNeonAnimation: (animation: NeonAnimation) => void
+  uploadBanner: (file: File) => Promise<string[]>
 
   addCategory: () => void
   updateCategory: (id: string, patch: Partial<DraftCategory>) => void
@@ -53,7 +59,7 @@ export const useMenuBuilderStore = create<MenuBuilderState>((set, get) => ({
   isPublishing: false,
   publishStatus: 'idle',
   publishError: null,
-  style: { layout: 'list', accentColor: '#22d3ee', bannerUrl: null, neonEnabled: false, neonPlacement: null },
+  style: { layout: 'list', accentColor: '#22d3ee', bannerUrls: [], neonEnabled: false, neonColor: '#22d3ee', backgroundColor: '#0b0f19' },
 
   setContext: (ctx) => set({ restaurantId: ctx.restaurantId, restaurantSlug: ctx.restaurantSlug, restaurantName: ctx.restaurantName }),
 
@@ -61,14 +67,63 @@ export const useMenuBuilderStore = create<MenuBuilderState>((set, get) => ({
     set({
       categories: draft.categories.map((c) => ({ ...c, _isNew: false, _isDeleted: false })),
       items: draft.items.map((i) => ({ ...i, _isNew: false, _isDeleted: false })),
-      style: draft.style ?? { layout: 'list', accentColor: '#22d3ee', bannerUrl: null, neonEnabled: false, neonPlacement: null },
+      style: {
+        layout: draft.style?.layout ?? 'list',
+        accentColor: draft.style?.accentColor ?? '#22d3ee',
+        bannerUrls: Array.isArray(draft.style?.bannerUrls) ? draft.style.bannerUrls : [],
+        neonEnabled: draft.style?.neonEnabled ?? false,
+        neonColor: draft.style?.neonColor ?? '#22d3ee',
+        backgroundColor: draft.style?.backgroundColor ?? '#0b0f19',
+      },
     }),
 
   reset: () =>
-    set({ categories: [], items: [], editedItemId: null, publishStatus: 'idle', publishError: null, style: { layout: 'list', accentColor: '#22d3ee', bannerUrl: null, neonEnabled: false, neonPlacement: null } }),
+    set({ categories: [], items: [], editedItemId: null, publishStatus: 'idle', publishError: null, style: { layout: 'list', accentColor: '#22d3ee', bannerUrls: [], neonEnabled: false, neonColor: '#22d3ee', backgroundColor: '#0b0f19' } }),
 
   setMenuStyle: (patch) =>
     set((state) => ({ style: { ...state.style, ...patch } })),
+
+  setBannerUrls: (urls: string[]) => get().setMenuStyle({ bannerUrls: urls }),
+  setNeonEnabled: (enabled: boolean) => get().setMenuStyle({ neonEnabled: enabled }),
+  setNeonColor: (color: string) => get().setMenuStyle({ neonColor: color }),
+  setBackgroundColor: (color: string) => get().setMenuStyle({ backgroundColor: color }),
+
+  addBannerUrl: (url: string) => {
+    const current = get().style.bannerUrls
+    const next = [...current.filter((u) => u !== url), url].slice(0, 3)
+    get().setMenuStyle({ bannerUrls: next })
+  },
+
+  removeBannerUrl: (url: string) => {
+    const current = get().style.bannerUrls
+    get().setMenuStyle({ bannerUrls: current.filter((u) => u !== url) })
+  },
+
+  uploadBanner: async (file: File) => {
+    const { restaurantId } = get()
+    if (!restaurantId) throw new Error('لا يوجد مطرب مرتبط بالحساب.')
+
+    const currentUrls = get().style.bannerUrls
+    if (currentUrls.length >= 3) throw new Error('لا يمكن رفع أكثر من 3 صور إعلانية.')
+
+    const fileExt = file.name.split('.').pop() ?? 'jpg'
+    const fileName = `banner_${Date.now()}_${Math.random().toString(36).slice(2, 9)}.${fileExt}`
+    const filePath = `banners/${restaurantId}/${fileName}`
+
+    const { error: uploadError } = await supabase.storage
+      .from('banners')
+      .upload(filePath, file, { cacheControl: '3600', upsert: false })
+
+    if (uploadError) throw uploadError
+
+    const { data: urlData } = await supabase.storage
+      .from('banners')
+      .getPublicUrl(filePath)
+
+    get().addBannerUrl(urlData.publicUrl)
+    return get().style.bannerUrls
+  },
+
 
   addCategory: () => {
     const category: DraftCategory = {
@@ -244,22 +299,13 @@ export const useMenuBuilderStore = create<MenuBuilderState>((set, get) => ({
         await supabase.from('menu_items').delete().eq('id', it.id)
       }
 
-      // 5. حفظ نمط العرض (style) بشكل دائم في جدول restaurant_branding
+      // 5. حفظ نمط العرض (style) بشكل دائم في جدول restaurant_branding ( upsert لتجنب تعارض 409 )
       const { style } = get()
-      const { data: brandingData, error: brandingError } = await supabase
+      const { error: brandingError } = await supabase
         .from('restaurant_branding')
-        .update({ style })
-        .eq('restaurant_id', restaurantId)
+        .upsert({ restaurant_id: restaurantId, style }, { onConflict: 'restaurant_id' })
 
       if (brandingError) throw brandingError
-
-      // إذا لم يكن هناك صف موجود للمطعم، قم بإدراج صف جديد
-      if (!brandingData || (brandingData as unknown[]).length === 0) {
-        const { error: insertError } = await supabase
-          .from('restaurant_branding')
-          .insert({ restaurant_id: restaurantId, style })
-        if (insertError) throw insertError
-      }
 
       set({ isPublishing: false, publishStatus: 'success', publishError: null })
       return { ok: true, error: null }
