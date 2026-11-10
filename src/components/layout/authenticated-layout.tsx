@@ -6,12 +6,14 @@ import { SearchProvider } from '@/context/search-provider'
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
 import { AppSidebar } from '@/components/layout/app-sidebar'
 import { SkipToMain } from '@/components/skip-to-main'
+import { useLanguage } from '@/i18n'
 
 type AuthenticatedLayoutProps = {
   children?: React.ReactNode
 }
 
 export function AuthenticatedLayout({ children }: AuthenticatedLayoutProps) {
+  const { direction } = useLanguage()
   const defaultOpen = getCookie('sidebar_state') !== 'false'
   return (
     <SearchProvider>
@@ -20,6 +22,7 @@ export function AuthenticatedLayout({ children }: AuthenticatedLayoutProps) {
           <SkipToMain />
           <AppSidebar />
           <SidebarInset
+            dir={direction}
             className={cn(
               // Set content container, so we can use container queries
               '@container/content',

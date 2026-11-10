@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase'
+import { useCallback } from 'react'
 
 export interface RestaurantSettings {
   id: string
@@ -8,7 +9,7 @@ export interface RestaurantSettings {
 }
 
 export function useRestaurantSettingsApi() {
-  async function fetchSettings(restaurantId: string): Promise<RestaurantSettings | null> {
+  const fetchSettings = useCallback(async (restaurantId: string): Promise<RestaurantSettings | null> => {
     const { data, error } = await supabase
       .from('restaurants')
       .select('id, name, ordering_mode, whatsapp_number')
@@ -24,12 +25,12 @@ export function useRestaurantSettingsApi() {
           whatsapp_number: data.whatsapp_number,
         }
       : null
-  }
+  }, [])
 
-  async function updateSettings(
+  const updateSettings = useCallback(async (
     restaurantId: string,
     input: { ordering_mode?: 'system' | 'whatsapp'; whatsapp_number?: string | null }
-  ): Promise<void> {
+  ): Promise<void> => {
     const { error } = await supabase
       .from('restaurants')
       .update({
@@ -39,7 +40,7 @@ export function useRestaurantSettingsApi() {
       .eq('id', restaurantId)
 
     if (error) throw error
-  }
+  }, [])
 
   return { fetchSettings, updateSettings }
 }

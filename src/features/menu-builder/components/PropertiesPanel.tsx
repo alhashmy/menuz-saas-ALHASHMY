@@ -9,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { useMenuBuilderStore } from '../store'
+import { useLanguage } from '@/i18n'
 
 interface PropertiesPanelProps {
   open: boolean
@@ -21,6 +22,7 @@ export function PropertiesPanel({
   target,
   onClose,
 }: PropertiesPanelProps) {
+  const { language } = useLanguage()
   const {
     items,
     categories,
@@ -41,8 +43,8 @@ export function PropertiesPanel({
   const handleSave = useCallback(() => {
     setEditedItem(null)
     onClose()
-    toast.success('تم التعديل')
-  }, [setEditedItem, onClose])
+    toast.success(language === 'ar' ? 'تم التعديل' : 'Changes saved')
+  }, [setEditedItem, onClose, language])
 
   useEffect(() => {
     if (!open) return
@@ -70,7 +72,7 @@ export function PropertiesPanel({
       >
         <div className='px-6 py-5 border-b border-white/5 flex items-center justify-between'>
           <h2 className='text-lg font-semibold text-white'>
-            {isItem ? 'تعديل الوجبة' : 'تعديل القسم'}
+            {isItem ? language === 'ar' ? 'تعديل الوجبة' : 'Edit item' : language === 'ar' ? 'تعديل القسم' : 'Edit category'}
           </h2>
           <Button
             variant='ghost'
@@ -87,7 +89,7 @@ export function PropertiesPanel({
             <>
               <div className='space-y-2'>
                 <Label className='text-sm font-medium text-slate-300'>
-                  الاسم (عربي)
+                  {language === 'ar' ? 'الاسم (عربي)' : 'Arabic name'}
                 </Label>
                 <Input
                   defaultValue={item?.name_ar ?? item?.name ?? ''}
@@ -101,7 +103,7 @@ export function PropertiesPanel({
               </div>
               <div className='space-y-2'>
                 <Label className='text-sm font-medium text-slate-300'>
-                  الاسم (إنجليزي)
+                  {language === 'ar' ? 'الاسم (إنجليزي)' : 'English name'}
                 </Label>
                 <Input
                   defaultValue={item?.name ?? ''}
@@ -110,7 +112,7 @@ export function PropertiesPanel({
                 />
               </div>
               <div className='space-y-2'>
-                <Label className='text-sm font-medium text-slate-300'>السعر</Label>
+                <Label className='text-sm font-medium text-slate-300'>{language === 'ar' ? 'السعر' : 'Price'}</Label>
                 <div className='flex items-center gap-2'>
                   <Input
                     type='number'
@@ -128,7 +130,7 @@ export function PropertiesPanel({
                 </div>
               </div>
               <div className='space-y-2'>
-                <Label className='text-sm font-medium text-slate-300'>الوصف</Label>
+                <Label className='text-sm font-medium text-slate-300'>{language === 'ar' ? 'الوصف' : 'Description'}</Label>
                 <Textarea
                   defaultValue={item?.description ?? ''}
                   onChange={(e) =>
@@ -142,7 +144,7 @@ export function PropertiesPanel({
               </div>
               <div className='space-y-2'>
                 <Label className='text-sm font-medium text-slate-300 flex items-center gap-2'>
-                  <ImageIcon className='size-4' /> مسار الصورة
+                  <ImageIcon className='size-4' /> {language === 'ar' ? 'مسار الصورة' : 'Image path'}
                 </Label>
                 <Input
                   defaultValue={item?.image_path ?? ''}
@@ -157,7 +159,7 @@ export function PropertiesPanel({
               </div>
               <div className='space-y-2'>
                 <Label className='text-sm font-medium text-slate-300 flex items-center gap-2'>
-                  <Eye className='size-4' /> متوفر للطلب
+                  <Eye className='size-4' /> {language === 'ar' ? 'متوفر للطلب' : 'Available to order'}
                 </Label>
                 <Switch
                   checked={item?.is_available ?? true}
@@ -175,10 +177,10 @@ export function PropertiesPanel({
                       deleteItem(item!.id)
                       setEditedItem(null)
                       onClose()
-                      toast.success('تم الحذف')
+                      toast.success(language === 'ar' ? 'تم الحذف' : 'Item deleted')
                     }}
                   >
-                    <Trash2 className='size-4 mr-1.5' /> حذف الوجبة
+                    <Trash2 className='size-4 mr-1.5' /> {language === 'ar' ? 'حذف الوجبة' : 'Delete item'}
                   </Button>
                 </div>
               )}
@@ -187,7 +189,7 @@ export function PropertiesPanel({
             <>
               <div className='space-y-2'>
                 <Label className='text-sm font-medium text-slate-300'>
-                  اسم القسم (عربي)
+                  {language === 'ar' ? 'اسم القسم (عربي)' : 'Arabic category name'}
                 </Label>
                 <Input
                   defaultValue={category?.name_ar ?? category?.name ?? ''}
@@ -201,7 +203,7 @@ export function PropertiesPanel({
               </div>
               <div className='space-y-2'>
                 <Label className='text-sm font-medium text-slate-300'>
-                  اسم القسم (إنجليزي)
+                  {language === 'ar' ? 'اسم القسم (إنجليزي)' : 'English category name'}
                 </Label>
                 <Input
                   defaultValue={category?.name ?? ''}
@@ -211,7 +213,7 @@ export function PropertiesPanel({
               </div>
               <div className='space-y-2'>
                 <Label className='text-sm font-medium text-slate-300 flex items-center gap-2'>
-                  <Eye className='size-4' /> قسم نشط
+                  <Eye className='size-4' /> {language === 'ar' ? 'قسم نشط' : 'Category active'}
                 </Label>
                 <Switch
                   checked={category?.is_active ?? true}
@@ -229,10 +231,10 @@ export function PropertiesPanel({
                       deleteCategory(category!.id)
                       setEditedItem(null)
                       onClose()
-                      toast.success('تم الحذف')
+                      toast.success(language === 'ar' ? 'تم الحذف' : 'Category deleted')
                     }}
                   >
-                    <Trash2 className='size-4 mr-1.5' /> حذف القسم
+                    <Trash2 className='size-4 mr-1.5' /> {language === 'ar' ? 'حذف القسم' : 'Delete category'}
                   </Button>
                 </div>
               )}
@@ -242,10 +244,10 @@ export function PropertiesPanel({
 
         <div className='p-4 border-t border-white/5 flex justify-end gap-2 bg-slate-900/80 backdrop-blur'>
           <Button variant='outline' onClick={onClose}>
-            إلغاء
+            {language === 'ar' ? 'إلغاء' : 'Cancel'}
           </Button>
           <Button onClick={handleSave}>
-            <Save className='size-4 mr-2' /> حفظ التغييرات
+            <Save className='size-4 mr-2' /> {language === 'ar' ? 'حفظ التغييرات' : 'Save changes'}
           </Button>
         </div>
       </div>

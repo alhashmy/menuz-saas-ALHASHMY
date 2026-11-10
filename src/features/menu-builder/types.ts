@@ -22,15 +22,58 @@ export interface DraftItem {
   _isDeleted?: boolean
 }
 
-export type MenuLayout = 'list' | 'grid-2' | 'grid-3' | 'cards'
+export type LayoutTemplate = 'grid-cards' | 'visual-categories' | 'list-categories'
+export type MenuTemplateId =
+  | 'aurora'
+  | 'noir'
+  | 'souk'
+  | 'volt'
+  | 'bustan'
+  | 'ivory'
+  | 'neon'
+  | 'majesty'
+  | 'cafe'
+  | 'market'
+  | 'modern'
+  | 'delivery'
+  | 'delivery-app'
+
+/** القوالب الأساسية لها هوية ثابتة ولا تسمح بتغيير التخطيط أو لوحة الألوان. */
+export const LOCKED_MENU_TEMPLATE_IDS = [
+  'aurora', 'noir', 'souk', 'volt', 'bustan', 'ivory',
+] as const satisfies readonly MenuTemplateId[]
+
+export function isLockedMenuTemplate(template: MenuTemplateId) {
+  return (LOCKED_MENU_TEMPLATE_IDS as readonly MenuTemplateId[]).includes(template)
+}
 
 export interface MenuStyle {
-  layout: MenuLayout
+  menuTemplate: MenuTemplateId
+  layoutTemplate: LayoutTemplate
+  themeMode: 'light' | 'dark'
   accentColor: string
-  bannerUrls: string[]
-  neonEnabled: boolean
-  neonColor: string
+  secondaryColor: string
+  gradientAngle: number
   backgroundColor: string
+  neonLineEnabled: boolean
+  socialLinks: {
+    whatsapp: string
+    instagram: string
+    facebook: string
+    tiktok: string
+  }
+  socialVisibility: {
+    whatsapp: boolean
+    instagram: boolean
+    facebook: boolean
+    tiktok: boolean
+  }
+  entryAdEnabled: boolean
+  entryAdImageUrl: string | null
+  entryAdTitle: string
+  entryAdMessage: string
+  isOpen: boolean
+  bannerUrls: string[]
 }
 
 export interface MenuDraft {

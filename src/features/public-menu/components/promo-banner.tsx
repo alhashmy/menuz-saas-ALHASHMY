@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Check, Copy, Tag } from 'lucide-react'
+import { toast } from 'sonner'
 import type { PublicOrderOffer } from '../api'
 
 interface PromoBannerProps {
@@ -19,9 +20,14 @@ export function PromoBanner({ offers, accentColor }: PromoBannerProps) {
   if (offers.length === 0) return null
 
   async function handleCopy(code: string) {
-    await navigator.clipboard.writeText(code)
-    setCopiedCode(code)
-    setTimeout(() => setCopiedCode(null), 1500)
+    try {
+      if (!navigator.clipboard) throw new Error('Clipboard is unavailable')
+      await navigator.clipboard.writeText(code)
+      setCopiedCode(code)
+      setTimeout(() => setCopiedCode(null), 1500)
+    } catch {
+      toast.message(`استخدم كود الخصم: ${code}`)
+    }
   }
 
   return (
@@ -39,7 +45,10 @@ export function PromoBanner({ offers, accentColor }: PromoBannerProps) {
             <p className='text-xs font-semibold'>
               {offer.title_ar ?? offer.title} — خصم {discountLabel(offer)}
             </p>
-            <p dir='ltr' className='font-mono text-[11px] text-muted-foreground'>
+            <p
+              dir='ltr'
+              className='font-mono text-[11px] text-muted-foreground'
+            >
               كود: {offer.promo_code}
             </p>
           </div>

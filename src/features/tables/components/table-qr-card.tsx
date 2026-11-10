@@ -5,6 +5,7 @@ import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { useDeleteTable, type RestaurantTable } from '../api'
+import { useLanguage } from '@/i18n'
 
 interface TableQrCardProps {
   table: RestaurantTable
@@ -12,6 +13,7 @@ interface TableQrCardProps {
 }
 
 export function TableQrCard({ table, restaurantSlug }: TableQrCardProps) {
+  const { language } = useLanguage()
   const canvasWrapperRef = useRef<HTMLDivElement>(null)
   const deleteTable = useDeleteTable()
 
@@ -55,9 +57,9 @@ export function TableQrCard({ table, restaurantSlug }: TableQrCardProps) {
   async function handleDelete() {
     try {
       await deleteTable.mutateAsync(table.id)
-      toast.success('تم حذف الطاولة.')
+      toast.success(language === 'ar' ? 'تم حذف الطاولة.' : 'Table deleted.')
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'تعذر الحذف.')
+      toast.error(err instanceof Error ? err.message : language === 'ar' ? 'تعذر الحذف.' : 'Unable to delete the table.')
     }
   }
 
@@ -76,10 +78,10 @@ export function TableQrCard({ table, restaurantSlug }: TableQrCardProps) {
       </CardContent>
       <CardFooter className='flex flex-wrap justify-center gap-2'>
         <Button size='sm' variant='outline' onClick={handleDownload}>
-          <Download className='size-4' /> تحميل
+          <Download className='size-4' /> {language === 'ar' ? 'تحميل' : 'Download'}
         </Button>
         <Button size='sm' variant='outline' onClick={handlePrint}>
-          <Printer className='size-4' /> طباعة
+          <Printer className='size-4' /> {language === 'ar' ? 'طباعة' : 'Print'}
         </Button>
         <Button
           size='sm'
@@ -88,7 +90,7 @@ export function TableQrCard({ table, restaurantSlug }: TableQrCardProps) {
           onClick={handleDelete}
           disabled={deleteTable.isPending}
         >
-          <Trash2 className='size-4' /> حذف
+          <Trash2 className='size-4' /> {language === 'ar' ? 'حذف' : 'Delete'}
         </Button>
       </CardFooter>
     </Card>

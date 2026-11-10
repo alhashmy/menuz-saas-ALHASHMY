@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/stores/auth-store'
+import { supabase } from '@/lib/supabase'
 
 export interface RestaurantBranding {
   restaurant_id: string
@@ -9,7 +9,7 @@ export interface RestaurantBranding {
   primary_color: string
   accent_color: string
   theme_mode: 'light' | 'dark' | 'system'
-  /** معرّف أحد قوالب المنيو العشرة الجاهزة، راجع MENU_TEMPLATES */
+  /** معرّف أحد قوالب المنيو الجاهزة، راجع MENU_TEMPLATES */
   menu_style: string
   font_family: string
 }
@@ -53,7 +53,10 @@ export function useRestaurantBranding() {
 /** يتحقق من توفر slug قبل الحفظ (باستثناء المطعم الحالي نفسه) */
 export function useCheckSlugAvailability() {
   return useMutation({
-    mutationFn: async (input: { slug: string; excludeRestaurantId: string }) => {
+    mutationFn: async (input: {
+      slug: string
+      excludeRestaurantId: string
+    }) => {
       const { data, error } = await supabase
         .from('restaurants')
         .select('id')
@@ -89,7 +92,9 @@ export function useUpdateRestaurantSlug() {
     },
     onSuccess: (slug) => {
       if (restaurant) setRestaurant({ ...restaurant, slug })
-      queryClient.invalidateQueries({ queryKey: ['restaurant-branding', restaurantId] })
+      queryClient.invalidateQueries({
+        queryKey: ['restaurant-branding', restaurantId],
+      })
     },
   })
 }
@@ -108,7 +113,9 @@ export function useUpdateBranding() {
       if (error) throw error
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['restaurant-branding', restaurantId] })
+      queryClient.invalidateQueries({
+        queryKey: ['restaurant-branding', restaurantId],
+      })
     },
   })
 }

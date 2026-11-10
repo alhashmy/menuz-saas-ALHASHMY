@@ -1,3 +1,4 @@
+import { useLanguage } from '@/i18n'
 import { useLayout } from '@/context/layout-provider'
 import {
   Sidebar,
@@ -7,13 +8,15 @@ import {
   SidebarRail,
 } from '@/components/ui/sidebar'
 // import { AppTitle } from './app-title'
-import { sidebarData } from './data/sidebar-data'
+import { createSidebarData } from './data/sidebar-data'
 import { NavGroup } from './nav-group'
 import { NavUser } from './nav-user'
 import { TeamSwitcher } from './team-switcher'
 
 export function AppSidebar() {
   const { collapsible, variant } = useLayout()
+  const { t } = useLanguage()
+  const sidebarData = createSidebarData(t)
   return (
     <Sidebar collapsible={collapsible} variant={variant}>
       <SidebarHeader>

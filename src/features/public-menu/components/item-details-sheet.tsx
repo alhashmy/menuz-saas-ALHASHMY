@@ -1,17 +1,25 @@
-import { UtensilsCrossed } from 'lucide-react'
+import { useState } from 'react'
+import { UtensilsCrossed, Minus, Plus } from 'lucide-react'
+import { toast } from 'sonner'
+import { MAX_CART_ITEM_QUANTITY, useCartStore } from '@/stores/cart-store'
+import { getMenuImageUrl } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Label } from '@/components/ui/label'
 import {
   Sheet,
   SheetContent,
-  SheetDescription,
   SheetHeader,
   SheetTitle,
+  SheetDescription,
 } from '@/components/ui/sheet'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { useCartStore } from '@/stores/cart-store'
-import { toast } from 'sonner'
-import { applyItemOffer, type PublicItemOffer, type PublicMenuItem } from '../api'
+import { Textarea } from '@/components/ui/textarea'
+import {
+  applyItemOffer,
+  type PublicItemOffer,
+  type PublicMenuItem,
+} from '../api'
 
 interface ItemDetailsSheetProps {
   item: PublicMenuItem | null
@@ -19,6 +27,7 @@ interface ItemDetailsSheetProps {
   offer?: PublicItemOffer
   onOpenChange: (open: boolean) => void
   isAvailable?: boolean
+  themeMode?: 'light' | 'dark'
 }
 
 export function ItemDetailsSheet({
@@ -27,36 +36,65 @@ export function ItemDetailsSheet({
   offer,
   onOpenChange,
   isAvailable = true,
+  themeMode = 'dark',
 }: ItemDetailsSheetProps) {
   const { finalPrice, hasDiscount } = item
     ? applyItemOffer(item.price, offer)
     : { finalPrice: 0, hasDiscount: false }
-  const addToCart = useCartStore((state) => state.addItem)
+  const { addItem } = useCartStore()
+  const [quantity, setQuantity] = useState(1)
+  const [notes, setNotes] = useState('')
+
+  const isDark = themeMode === 'dark'
+  const isLight = !isDark
+  const bg = isLight ? 'bg-white' : 'bg-[#0d0d0d]'
+  const muted = isLight ? 'text-slate-500' : 'text-slate-400'
+  const border = isLight ? 'border-slate-200' : 'border-white/10'
+  const imageUrl = item?.image_path
+    ? item.image_path.startsWith('https://') ||
+      item.image_path.startsWith('http://')
+      ? item.image_path
+      : getMenuImageUrl(item.image_path)
+    : null
 
   function handleAddToCart() {
     if (!item || !isAvailable) return
-    addToCart({
+    addItem({
       id: item.id,
       name: item.name_ar ?? item.name,
       price: finalPrice,
       imagePath: item.image_path,
+      notes,
+      quantity,
     })
     toast('أُضيف إلى السلة', {
-      description: `${item.name_ar ?? item.name}`,
+      description: `${item.name_ar ?? item.name} × ${quantity}`,
     })
+    setQuantity(1)
+    setNotes('')
     onOpenChange(false)
   }
 
+  const total = finalPrice * quantity
+
   return (
     <Sheet open={!!item} onOpenChange={onOpenChange}>
-      <SheetContent side='right' className='max-w-md w-full h-full bg-background p-0'>
+      <SheetContent
+        side='bottom'
+        className={`${bg} h-auto max-h-[90vh] w-full p-0`}
+      >
         {item && (
           <>
-            <div className='mx-auto mb-2 h-1.5 w-10 rounded-full bg-muted' />
+            <div
+              className={cn(
+                'mx-auto mb-2 h-1.5 w-10 rounded-full',
+                isLight ? 'bg-slate-200' : 'bg-[#1f1f1f]'
+              )}
+            />
 
             <div className='relative mb-4'>
               {hasDiscount && offer && (
-                <Badge className='absolute top-2 right-2 z-10 bg-red-600 text-white hover:bg-red-600'>
+                <Badge className='absolute top-2 right-2 z-10 bg-red-600 text-white'>
                   خصم{' '}
                   {offer.discount_kind === 'percentage'
                     ? `${offer.discount_value}%`
@@ -68,35 +106,56 @@ export function ItemDetailsSheet({
                   غير متوفر
                 </Badge>
               )}
-              {item.image_path ? (
+              {imageUrl ? (
                 <img
-                  src={item.image_path || 'رابط_صورة_افتراضية_أو_فارغ'}
+                  src={imageUrl}
                   alt={item.name_ar ?? item.name}
-                  className='w-full h-56 object-cover rounded-t-lg bg-gray-100'
+                  className={cn(
+                    'h-48 w-full rounded-xl object-cover',
+                    isLight ? 'bg-slate-100' : 'bg-[#141923]'
+                  )}
                 />
               ) : (
-                <div className='flex h-56 w-full items-center justify-center rounded-t-lg bg-gray-100 text-muted-foreground'>
+                <div
+                  className={cn(
+                    'flex h-48 w-full items-center justify-center rounded-xl',
+                    isLight ? 'bg-slate-100' : 'bg-[#141923]',
+                    muted
+                  )}
+                >
                   <UtensilsCrossed className='size-10' />
                 </div>
               )}
             </div>
 
-            <div className='flex flex-col gap-3 p-4 flex-grow'>
-              <div className='flex items-center justify-between'>
-                <SheetHeader className='p-0 mb-0'>
-                  <SheetTitle className='text-xl' aria-describedby={undefined}>
-                    {item.name_ar ?? item.name}
-                  </SheetTitle>
-                  {(item.description_ar || item.description) && (
-                    <SheetDescription className='text-start'>
-                      {item.description_ar ?? item.description}
-                    </SheetDescription>
+            <div className='flex flex-col gap-3 p-4'>
+              <SheetHeader className='mb-0 p-0'>
+                <SheetTitle
+                  className={cn(
+                    'text-xl font-bold',
+                    isLight ? 'text-slate-900' : 'text-white'
                   )}
-                </SheetHeader>
-              </div>
+                >
+                  {item.name_ar ?? item.name}
+                </SheetTitle>
+                {(item.description_ar || item.description) && (
+                  <SheetDescription
+                    className={cn(
+                      'text-start',
+                      muted,
+                      'text-sm leading-relaxed'
+                    )}
+                  >
+                    {item.description_ar ?? item.description}
+                  </SheetDescription>
+                )}
+              </SheetHeader>
 
               <div className='flex items-baseline gap-2'>
-                <span className='text-2xl font-bold' style={{ color: accentColor }}>
+                <span
+                  className='text-2xl font-bold'
+                  style={{ color: accentColor }}
+                >
                   {finalPrice.toFixed(2)} د.ع
                 </span>
                 {hasDiscount && (
@@ -106,18 +165,79 @@ export function ItemDetailsSheet({
                 )}
               </div>
 
-              <Button
-                size='lg'
-                style={{ backgroundColor: accentColor }}
+              <div className='space-y-2'>
+                <Label
+                  htmlFor='item-notes'
+                  className={cn('text-sm font-medium', muted, 'block')}
+                >
+                  ملاحظات خاصة على الوجبة (اختياري)
+                </Label>
+                <Textarea
+                  id='item-notes'
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder='مثل: بدون بصل، شواء جيد'
+                  rows={2}
+                  maxLength={240}
+                  className={cn(
+                    isLight
+                      ? 'border-slate-200 bg-slate-100 text-slate-900 placeholder-slate-500'
+                      : 'border-slate-700 bg-slate-800/50 text-slate-100 placeholder-slate-500',
+                    'text-sm'
+                  )}
+                />
+              </div>
+
+              <div
                 className={cn(
-                  'text-white hover:opacity-90 w-full',
-                  !isAvailable && 'pointer-events-none opacity-50'
+                  'flex items-center justify-between gap-3',
+                  border,
+                  'pt-3'
                 )}
-                disabled={!isAvailable}
-                onClick={handleAddToCart}
               >
-                إضافة إلى الطلب
-              </Button>
+                <div className='flex items-center gap-2'>
+                  <Button
+                    type='button'
+                    variant='outline'
+                    size='icon'
+                    className='size-10 rounded-lg'
+                    disabled={quantity <= 1 || !isAvailable}
+                    onClick={() => setQuantity(quantity - 1)}
+                  >
+                    <Minus className='size-4' />
+                  </Button>
+                  <span className='w-8 text-center text-lg font-bold'>
+                    {quantity}
+                  </span>
+                  <Button
+                    type='button'
+                    variant='outline'
+                    size='icon'
+                    className='size-10 rounded-lg'
+                    disabled={!isAvailable}
+                    onClick={() =>
+                      setQuantity((current) =>
+                        Math.min(MAX_CART_ITEM_QUANTITY, current + 1)
+                      )
+                    }
+                  >
+                    <Plus className='size-4' />
+                  </Button>
+                </div>
+                <Button
+                  type='button'
+                  size='lg'
+                  className={cn(
+                    'w-full rounded-xl text-white shadow-lg shadow-accent/40',
+                    !isAvailable && 'pointer-events-none opacity-50'
+                  )}
+                  disabled={!isAvailable}
+                  style={{ backgroundColor: accentColor }}
+                  onClick={handleAddToCart}
+                >
+                  إضافة إلى السلة • {total.toLocaleString('ar-IQ')} د.ع
+                </Button>
+              </div>
             </div>
           </>
         )}

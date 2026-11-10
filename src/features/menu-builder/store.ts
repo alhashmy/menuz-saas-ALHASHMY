@@ -6,8 +6,26 @@ import type {
   MenuBuilderPublishResult,
   MenuDraft,
   MenuStyle,
-  NeonAnimation,
+  MenuTemplateId,
 } from './types'
+
+const LOCKED_TEMPLATE_STYLES: Record<
+  Extract<MenuTemplateId, 'aurora' | 'noir' | 'souk' | 'volt' | 'bustan' | 'ivory'>,
+  Pick<MenuStyle, 'layoutTemplate' | 'themeMode' | 'accentColor' | 'secondaryColor' | 'backgroundColor'>
+> = {
+  aurora: { layoutTemplate: 'grid-cards', themeMode: 'light', accentColor: '#ed6a3a', secondaryColor: '#fff1e8', backgroundColor: '#fff8f2' },
+  noir: { layoutTemplate: 'grid-cards', themeMode: 'dark', accentColor: '#d7b46a', secondaryColor: '#2b2418', backgroundColor: '#101112' },
+  souk: { layoutTemplate: 'list-categories', themeMode: 'light', accentColor: '#a84d2a', secondaryColor: '#f5dfc4', backgroundColor: '#fff7e8' },
+  volt: { layoutTemplate: 'list-categories', themeMode: 'dark', accentColor: '#44e7b6', secondaryColor: '#172843', backgroundColor: '#131426' },
+  bustan: { layoutTemplate: 'list-categories', themeMode: 'light', accentColor: '#478b5e', secondaryColor: '#d8ebd7', backgroundColor: '#edf4eb' },
+  ivory: { layoutTemplate: 'list-categories', themeMode: 'light', accentColor: '#8a6a42', secondaryColor: '#efe2c9', backgroundColor: '#f7f1e5' },
+}
+
+function lockedTemplateStyle(template: MenuTemplateId) {
+  return template in LOCKED_TEMPLATE_STYLES
+    ? LOCKED_TEMPLATE_STYLES[template as keyof typeof LOCKED_TEMPLATE_STYLES]
+    : null
+}
 
 function tempId(prefix = 'temp') {
   return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`
@@ -17,6 +35,10 @@ interface MenuBuilderState {
   restaurantId: string | null
   restaurantSlug: string | null
   restaurantName: string | null
+  restaurantDescription: string | null
+  restaurantLogoUrl: string | null
+  googleMapsUrl: string | null
+  wazeUrl: string | null
   categories: DraftCategory[]
   items: DraftItem[]
   editedItemId: string | null
@@ -24,15 +46,21 @@ interface MenuBuilderState {
   publishStatus: 'idle' | 'success' | 'error'
   publishError: string | null
   style: MenuStyle
+  originalStyle: MenuStyle | null
 
   setContext: (ctx: { restaurantId: string; restaurantSlug: string; restaurantName: string }) => void
+  setRestaurantName: (name: string | null) => void
+  setRestaurantDescription: (description: string | null) => void
+  setRestaurantLogoUrl: (url: string | null) => void
+  setGoogleMapsUrl: (url: string | null) => void
+  setWazeUrl: (url: string | null) => void
   load: (draft: MenuDraft) => void
   reset: () => void
   setMenuStyle: (patch: Partial<MenuStyle>) => void
+  restoreOriginalStyle: () => void
   setBannerUrls: (urls: string[]) => void
   addBannerUrl: (url: string) => void
   removeBannerUrl: (url: string) => void
-  setNeonAnimation: (animation: NeonAnimation) => void
   uploadBanner: (file: File) => Promise<string[]>
 
   addCategory: () => void
@@ -53,40 +81,120 @@ export const useMenuBuilderStore = create<MenuBuilderState>((set, get) => ({
   restaurantId: null,
   restaurantSlug: null,
   restaurantName: null,
+  restaurantDescription: null,
+  restaurantLogoUrl: null,
+  googleMapsUrl: null,
+  wazeUrl: null,
   categories: [],
   items: [],
   editedItemId: null,
   isPublishing: false,
   publishStatus: 'idle',
   publishError: null,
-  style: { layout: 'list', accentColor: '#22d3ee', bannerUrls: [], neonEnabled: false, neonColor: '#22d3ee', backgroundColor: '#0b0f19' },
+  originalStyle: null,
+  style: {
+      menuTemplate: 'aurora',
+    layoutTemplate: 'grid-cards',
+    themeMode: 'dark',
+    accentColor: '#22d3ee',
+    secondaryColor: '#7c3aed',
+    gradientAngle: 135,
+    backgroundColor: '#fffdf9',
+    neonLineEnabled: false,
+    socialLinks: { whatsapp: '', instagram: '', facebook: '', tiktok: '' },
+    socialVisibility: { whatsapp: false, instagram: false, facebook: false, tiktok: false },
+    entryAdEnabled: false,
+    entryAdImageUrl: null,
+    entryAdTitle: '',
+    entryAdMessage: '',
+    isOpen: true,
+    bannerUrls: [],
+  },
 
-  setContext: (ctx) => set({ restaurantId: ctx.restaurantId, restaurantSlug: ctx.restaurantSlug, restaurantName: ctx.restaurantName }),
+  setContext: (ctx) =>
+    set({
+      restaurantId: ctx.restaurantId,
+      restaurantSlug: ctx.restaurantSlug,
+      restaurantName: ctx.restaurantName,
+    }),
 
-  load: (draft) =>
+  setRestaurantName: (name) => set({ restaurantName: name }),
+  setRestaurantDescription: (description) => set({ restaurantDescription: description }),
+  setRestaurantLogoUrl: (url) => set({ restaurantLogoUrl: url }),
+  setGoogleMapsUrl: (url) => set({ googleMapsUrl: url }),
+  setWazeUrl: (url) => set({ wazeUrl: url }),
+
+  load: (draft) => {
+    const normalizedStyle: MenuStyle = {
+      menuTemplate: draft.style?.menuTemplate ?? 'aurora',
+      layoutTemplate: draft.style?.layoutTemplate ?? 'grid-cards',
+      themeMode: draft.style?.themeMode ?? 'dark',
+      accentColor: draft.style?.accentColor ?? '#22d3ee',
+      secondaryColor: draft.style?.secondaryColor ?? '#7c3aed',
+      gradientAngle: draft.style?.gradientAngle ?? 135,
+      backgroundColor: draft.style?.backgroundColor ?? '#fffdf9',
+      neonLineEnabled: draft.style?.neonLineEnabled ?? false,
+      socialLinks: draft.style?.socialLinks ?? { whatsapp: '', instagram: '', facebook: '', tiktok: '' },
+      socialVisibility: draft.style?.socialVisibility ?? { whatsapp: false, instagram: false, facebook: false, tiktok: false },
+      entryAdEnabled: draft.style?.entryAdEnabled ?? false,
+      entryAdImageUrl: draft.style?.entryAdImageUrl ?? null,
+      entryAdTitle: draft.style?.entryAdTitle ?? '',
+      entryAdMessage: draft.style?.entryAdMessage ?? '',
+      isOpen: draft.style?.isOpen ?? true,
+      bannerUrls: Array.isArray(draft.style?.bannerUrls) ? draft.style.bannerUrls : [],
+    }
     set({
       categories: draft.categories.map((c) => ({ ...c, _isNew: false, _isDeleted: false })),
       items: draft.items.map((i) => ({ ...i, _isNew: false, _isDeleted: false })),
+      style: normalizedStyle,
+      originalStyle: structuredClone(normalizedStyle),
+    })
+  },
+
+  reset: () =>
+    set({
+      categories: [],
+      items: [],
+      editedItemId: null,
+      restaurantDescription: null,
+      restaurantLogoUrl: null,
+      googleMapsUrl: null,
+      wazeUrl: null,
+      publishStatus: 'idle',
+      publishError: null,
       style: {
-        layout: draft.style?.layout ?? 'list',
-        accentColor: draft.style?.accentColor ?? '#22d3ee',
-        bannerUrls: Array.isArray(draft.style?.bannerUrls) ? draft.style.bannerUrls : [],
-        neonEnabled: draft.style?.neonEnabled ?? false,
-        neonColor: draft.style?.neonColor ?? '#22d3ee',
-        backgroundColor: draft.style?.backgroundColor ?? '#0b0f19',
+        menuTemplate: 'aurora',
+        layoutTemplate: 'grid-cards',
+        themeMode: 'dark',
+        accentColor: '#22d3ee',
+        secondaryColor: '#7c3aed',
+        gradientAngle: 135,
+        backgroundColor: '#fffdf9',
+        neonLineEnabled: false,
+        socialLinks: { whatsapp: '', instagram: '', facebook: '', tiktok: '' },
+        socialVisibility: { whatsapp: false, instagram: false, facebook: false, tiktok: false },
+        entryAdEnabled: false,
+        entryAdImageUrl: null,
+        entryAdTitle: '',
+        entryAdMessage: '',
+        isOpen: true,
+        bannerUrls: [],
       },
     }),
 
-  reset: () =>
-    set({ categories: [], items: [], editedItemId: null, publishStatus: 'idle', publishError: null, style: { layout: 'list', accentColor: '#22d3ee', bannerUrls: [], neonEnabled: false, neonColor: '#22d3ee', backgroundColor: '#0b0f19' } }),
-
   setMenuStyle: (patch) =>
-    set((state) => ({ style: { ...state.style, ...patch } })),
+    set((state) => {
+      const fixedStyle = lockedTemplateStyle(patch.menuTemplate ?? state.style.menuTemplate)
+      return { style: fixedStyle ? { ...state.style, ...patch, ...fixedStyle } : { ...state.style, ...patch } }
+    }),
+  restoreOriginalStyle: () =>
+    set((state) =>
+      state.originalStyle
+        ? { style: structuredClone(state.originalStyle), publishStatus: 'idle' }
+        : {}
+    ),
 
   setBannerUrls: (urls: string[]) => get().setMenuStyle({ bannerUrls: urls }),
-  setNeonEnabled: (enabled: boolean) => get().setMenuStyle({ neonEnabled: enabled }),
-  setNeonColor: (color: string) => get().setMenuStyle({ neonColor: color }),
-  setBackgroundColor: (color: string) => get().setMenuStyle({ backgroundColor: color }),
 
   addBannerUrl: (url: string) => {
     const current = get().style.bannerUrls
@@ -124,7 +232,6 @@ export const useMenuBuilderStore = create<MenuBuilderState>((set, get) => ({
     return get().style.bannerUrls
   },
 
-
   addCategory: () => {
     const category: DraftCategory = {
       id: tempId('cat'),
@@ -147,7 +254,6 @@ export const useMenuBuilderStore = create<MenuBuilderState>((set, get) => ({
   deleteCategory: (id) => {
     const category = get().categories.find((c) => c.id === id)
     if (!category) return
-    // حذف منطقي: إذا كان 섹س جديد يُزال مباشرة، وإلا يُعدّل للحذف عند النشر
     if (category._isNew) {
       set((state) => ({
         categories: state.categories.filter((c) => c.id !== id),
@@ -228,7 +334,6 @@ export const useMenuBuilderStore = create<MenuBuilderState>((set, get) => ({
       return { ok: false, error: 'لا يوجد مطعم مرتبط بالحساب.' }
     }
 
-    // تأكيد الجلسة الحالية لمرور الطلب عبر قواعد الحماية (RLS)
     const { data: sessionData } = await supabase.auth.getSession()
     if (!sessionData.session) {
       set({ publishStatus: 'error', publishError: 'انتهت جلسة تسجيل الدخول.' })
@@ -238,9 +343,24 @@ export const useMenuBuilderStore = create<MenuBuilderState>((set, get) => ({
     set({ isPublishing: true, publishStatus: 'idle', publishError: null })
 
     try {
-      const { categories, items } = get()
+      const { categories, items, restaurantName, style } = get()
 
-      // 1. الأقسام: إدراج الجديد وتعديل الموجود
+      // احذف الوجبات أولاً ثم الأقسام؛ يمنع ذلك تعارض المفاتيح الأجنبية.
+      for (const item of items.filter((item) => item._isDeleted)) {
+        const { error } = await supabase.from('menu_items').delete().eq('id', item.id)
+        if (error) throw error
+      }
+      for (const category of categories.filter((category) => category._isDeleted)) {
+        const { error } = await supabase
+          .from('menu_categories')
+          .delete()
+          .eq('id', category.id)
+        if (error) throw error
+      }
+
+      // تحفظ الأقسام الجديدة أولاً ونستبدل المعرفات المؤقتة بمعرفات Supabase.
+      const categoryIds = new Map<string, string>()
+      const persistedCategories: DraftCategory[] = []
       const upsertCategories = categories.filter((c) => !c._isDeleted)
       for (const cat of upsertCategories) {
         const payload = {
@@ -251,31 +371,31 @@ export const useMenuBuilderStore = create<MenuBuilderState>((set, get) => ({
           restaurant_id: restaurantId,
         }
         if (cat._isNew) {
-          const { error } = await supabase
+          const { data, error } = await supabase
             .from('menu_categories')
             .insert(payload)
             .select('id')
             .single()
           if (error) throw error
+          categoryIds.set(cat.id, data.id)
+          persistedCategories.push({ ...cat, id: data.id, _isNew: false })
         } else {
           const { error } = await supabase
             .from('menu_categories')
             .update(payload)
             .eq('id', cat.id)
           if (error) throw error
+          persistedCategories.push({ ...cat, _isNew: false, _isDeleted: false })
         }
       }
 
-      // 2. حذف الأقسام المشار إليها
-      for (const cat of categories.filter((c) => c._isDeleted)) {
-        await supabase.from('menu_categories').delete().eq('id', cat.id)
-      }
-
-      // 3. الوجبات: إدراج الجديد وتعديل الموجود
+      // الوجبات تستخدم المعرف الحقيقي للقسم الجديد، لا المعرّف المؤقت.
+      const persistedItems: DraftItem[] = []
       const upsertItems = items.filter((i) => !i._isDeleted)
       for (const it of upsertItems) {
+        const categoryId = categoryIds.get(it.category_id) ?? it.category_id
         const payload = {
-          category_id: it.category_id,
+          category_id: categoryId,
           name: it.name,
           name_ar: it.name_ar,
           description: it.description,
@@ -286,28 +406,65 @@ export const useMenuBuilderStore = create<MenuBuilderState>((set, get) => ({
           restaurant_id: restaurantId,
         }
         if (it._isNew) {
-          const { error } = await supabase.from('menu_items').insert(payload)
+          const { data, error } = await supabase
+            .from('menu_items')
+            .insert(payload)
+            .select('id')
+            .single()
           if (error) throw error
+          persistedItems.push({
+            ...it,
+            id: data.id,
+            category_id: categoryId,
+            _isNew: false,
+          })
         } else {
           const { error } = await supabase.from('menu_items').update(payload).eq('id', it.id)
           if (error) throw error
+          persistedItems.push({
+            ...it,
+            category_id: categoryId,
+            _isNew: false,
+            _isDeleted: false,
+          })
         }
       }
 
-      // 4. حذف الوجبات المشار إليها
-      for (const it of items.filter((i) => i._isDeleted)) {
-        await supabase.from('menu_items').delete().eq('id', it.id)
-      }
-
-      // 5. حفظ نمط العرض (style) بشكل دائم في جدول restaurant_branding ( upsert لتجنب تعارض 409 )
-      const { style } = get()
+      // 5. حفظ نمط العرض في restaurant_branding
       const { error: brandingError } = await supabase
         .from('restaurant_branding')
-        .upsert({ restaurant_id: restaurantId, style }, { onConflict: 'restaurant_id' })
+        .upsert(
+          {
+            restaurant_id: restaurantId,
+            menu_style: style.menuTemplate,
+            style,
+          },
+          { onConflict: 'restaurant_id' }
+        )
 
       if (brandingError) throw brandingError
 
-      set({ isPublishing: false, publishStatus: 'success', publishError: null })
+      // 6. حفظ إعدادات الهوية في جدول restaurants
+      const { error: restaurantError } = await supabase
+        .from('restaurants')
+        .update({
+          name: restaurantName ?? undefined,
+          description: get().restaurantDescription ?? undefined,
+          is_open: style.isOpen,
+          google_maps_url: get().googleMapsUrl ?? undefined,
+          waze_url: get().wazeUrl ?? undefined,
+        })
+        .eq('id', restaurantId)
+
+      if (restaurantError) throw restaurantError
+
+      set({
+        categories: persistedCategories,
+        items: persistedItems,
+        isPublishing: false,
+        publishStatus: 'success',
+        publishError: null,
+      })
       return { ok: true, error: null }
     } catch (err) {
       set({

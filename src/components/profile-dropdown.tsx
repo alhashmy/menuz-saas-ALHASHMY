@@ -13,9 +13,11 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { SignOutDialog } from '@/components/sign-out-dialog'
+import { useLanguage } from '@/i18n'
 
 export function ProfileDropdown() {
   const [open, setOpen] = useDialogState()
+  const { language } = useLanguage()
 
   return (
     <>
@@ -31,7 +33,9 @@ export function ProfileDropdown() {
         <DropdownMenuContent className='w-56' align='end' forceMount>
           <DropdownMenuLabel className='font-normal'>
             <div className='flex flex-col gap-1.5'>
-              <p className='text-sm leading-none font-medium'>satnaing</p>
+              <p className='text-sm leading-none font-medium'>
+                {language === 'ar' ? 'مالك الحساب' : 'Account owner'}
+              </p>
               <p className='text-xs leading-none text-muted-foreground'>
                 satnaingdev@gmail.com
               </p>
@@ -41,27 +45,29 @@ export function ProfileDropdown() {
           <DropdownMenuGroup>
             <DropdownMenuItem asChild>
               <Link to='/settings'>
-                Profile
+                {language === 'ar' ? 'الملف الشخصي' : 'Profile'}
                 <DropdownMenuShortcut>⇧⌘P</DropdownMenuShortcut>
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
               <Link to='/settings'>
-                Billing
+                {language === 'ar' ? 'الفوترة' : 'Billing'}
                 <DropdownMenuShortcut>⌘B</DropdownMenuShortcut>
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
               <Link to='/settings'>
-                Settings
+                {language === 'ar' ? 'الإعدادات' : 'Settings'}
                 <DropdownMenuShortcut>⌘S</DropdownMenuShortcut>
               </Link>
             </DropdownMenuItem>
-            <DropdownMenuItem>New Team</DropdownMenuItem>
+            <DropdownMenuItem>
+              {language === 'ar' ? 'فريق جديد' : 'New team'}
+            </DropdownMenuItem>
           </DropdownMenuGroup>
           <DropdownMenuSeparator />
           <DropdownMenuItem variant='destructive' onClick={() => setOpen(true)}>
-            Sign out
+            {language === 'ar' ? 'تسجيل الخروج' : 'Sign out'}
             <DropdownMenuShortcut className='text-current'>
               ⇧⌘Q
             </DropdownMenuShortcut>

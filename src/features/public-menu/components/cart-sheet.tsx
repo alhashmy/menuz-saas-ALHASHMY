@@ -1,14 +1,14 @@
-import { Minus, Plus, ShoppingCart, Trash2 } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
+import { ArrowRight, Minus, Plus, ShoppingBag, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
-import { useCartStore } from '@/stores/cart-store'
+import { MAX_CART_ITEM_QUANTITY, useCartStore } from '@/stores/cart-store'
+import { getMenuImageUrl, supabase } from '@/lib/supabase'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet'
-import { useCreateOrder } from '@/features/orders/api'
 import { useRestaurantSettingsApi } from '@/features/orders/restaurant-settings-api'
-import { useState, useEffect } from 'react'
 
 interface CartSheetProps {
   open: boolean
@@ -16,114 +16,195 @@ interface CartSheetProps {
   restaurantId?: string
 }
 
-export function CartSheet({ open, onOpenChange, restaurantId }: CartSheetProps) {
-  const { items, removeItem, setQuantity, clear, itemCount } = useCartStore()
-  const createOrder = useCreateOrder()
-  const { fetchSettings } = useRestaurantSettingsApi()
+type CheckoutStep = 'items' | 'customer' | 'confirm'
 
-  const [checkoutStep, setCheckoutStep] = useState<'items' | 'customer' | 'confirm'>('items')
+interface PublicOrderResult {
+  id: string
+  total_amount: number
+  items: Array<{
+    name: string
+    price: number
+    quantity: number
+    total: number
+    notes?: string
+  }>
+}
+
+interface DeliveryZone {
+  id: string
+  name: string
+  delivery_fee: number
+  minimum_order: number
+}
+
+function publicImageUrl(path: string | null) {
+  if (!path) return null
+  return path.startsWith('https://') || path.startsWith('http://')
+    ? path
+    : getMenuImageUrl(path)
+}
+
+function validPhone(phone: string) {
+  return /^[+0-9 ()-]{7,25}$/.test(phone.trim())
+}
+
+function safeWhatsAppNumber(value: string | null) {
+  const digits = value?.replace(/\D/g, '') ?? ''
+  return /^[1-9]\d{7,14}$/.test(digits) ? digits : null
+}
+
+export function CartSheet({
+  open,
+  onOpenChange,
+  restaurantId,
+}: CartSheetProps) {
+  const { items, removeItem, setQuantity, clear, itemCount } = useCartStore()
+  const { fetchSettings } = useRestaurantSettingsApi()
+  const [checkoutStep, setCheckoutStep] = useState<CheckoutStep>('items')
   const [customerInfo, setCustomerInfo] = useState({
     name: '',
     phone: '',
     address: '',
   })
+  const [promoCode, setPromoCode] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [orderingMode, setOrderingMode] = useState<'system' | 'whatsapp' | null>(null)
-  const [whatsappNumber, setWhatsAppNumber] = useState<string | null>(null)
-
-  const subtotal = items.reduce(
-    (sum, item) => sum + (Number(item.price) || 0) * item.quantity,
-    0
+  const [orderingMode, setOrderingMode] = useState<'system' | 'whatsapp'>(
+    'system'
   )
-  const discountAmount = 0
+  const [whatsappNumber, setWhatsAppNumber] = useState<string | null>(null)
+  const [deliveryZones, setDeliveryZones] = useState<DeliveryZone[]>([])
+  const [deliveryZoneId, setDeliveryZoneId] = useState('')
+
+  const subtotal = useMemo(
+    () => items.reduce((sum, item) => sum + item.price * item.quantity, 0),
+    [items]
+  )
+  const customerName = customerInfo.name.trim().replace(/\s+/g, ' ')
+  const customerPhone = customerInfo.phone.trim()
+  const customerAddress = customerInfo.address.trim().replace(/\s+/g, ' ')
+  const customerValid = customerName.length >= 2 && validPhone(customerPhone)
+  const selectedZone = deliveryZones.find((zone) => zone.id === deliveryZoneId)
+  const deliveryFee = selectedZone?.delivery_fee ?? 0
+  const totalWithDelivery = subtotal + deliveryFee
+  const meetsZoneMinimum = !selectedZone || subtotal >= selectedZone.minimum_order
 
   useEffect(() => {
-    if (open && restaurantId) {
-      ;(async () => {
-        try {
-          const settings = await fetchSettings(restaurantId)
-          if (settings) {
-            setOrderingMode(settings.ordering_mode)
-            setWhatsAppNumber(settings.whatsapp_number)
-          }
-        } catch {
-          //silent
-        }
-      })()
+    if (!open || !restaurantId) return
+    let live = true
+    void fetchSettings(restaurantId)
+      .then((settings) => {
+        if (!live || !settings) return
+        setOrderingMode(
+          settings.ordering_mode === 'whatsapp' ? 'whatsapp' : 'system'
+        )
+        setWhatsAppNumber(settings.whatsapp_number)
+      })
+      .catch(() => {
+        if (live) setOrderingMode('system')
+      })
+    return () => {
+      live = false
     }
-  }, [open, restaurantId, fetchSettings])
+  }, [fetchSettings, open, restaurantId])
+
+  useEffect(() => {
+    if (!open || !restaurantId) return
+    void supabase.from('delivery_zones').select('id, name, delivery_fee, minimum_order').eq('restaurant_id', restaurantId).eq('is_active', true).order('sort_order')
+      .then(({ data }) => setDeliveryZones((data ?? []) as DeliveryZone[]))
+  }, [open, restaurantId])
+
+  function closeCart() {
+    setCheckoutStep('items')
+    onOpenChange(false)
+  }
 
   async function handleCheckout() {
-    if (items.length === 0) return
-    if (!restaurantId) {
-      toast.error('لا يوجد مطعم مرتبط بالقائمة الحالية.')
-      return
-    }
+    if (!restaurantId || !items.length || !customerValid) return
+    setIsSubmitting(true)
 
-    if (orderingMode === 'whatsapp') {
-      if (!whatsappNumber) {
-        toast.error('لم يتم ضبط رقم واتساب للمطعم.')
-        return
+    try {
+      // الخادم يعيد تسعير العناصر ويتحقق من توفرها؛ لا نرسل اسمًا أو سعرًا أو إجماليًا موثوقًا من المتصفح.
+      const orderPayload = {
+        p_restaurant_id: restaurantId,
+        p_customer_name: customerName,
+        p_customer_phone: customerPhone,
+        p_customer_address: customerAddress || null,
+        p_promo_code: promoCode.trim().slice(0, 64) || null,
+        p_items: items.map((item) => ({
+          item_id: item.id,
+          quantity: item.quantity,
+          notes: item.notes ?? null,
+        })),
+        p_delivery_zone_id: deliveryZoneId || null,
+      }
+      let { data, error } = await supabase.rpc('create_public_order_with_delivery', orderPayload)
+      // يسمح استمرار استقبال الطلبات في المشاريع التي لم تطبق ترحيل 0005 بعد.
+      if (error?.code === 'PGRST202') {
+        const legacy = await supabase.rpc('create_public_order', {
+          p_restaurant_id: restaurantId,
+          p_customer_name: customerName,
+          p_customer_phone: customerPhone,
+          p_customer_address: customerAddress || null,
+          p_promo_code: promoCode.trim().slice(0, 64) || null,
+          p_items: items.map((item) => ({ item_id: item.id, quantity: item.quantity, notes: item.notes ?? null })),
+        })
+        data = legacy.data
+        error = legacy.error
+      }
+      if (error) throw error
+
+      const order = data as PublicOrderResult
+      if (orderingMode === 'whatsapp') {
+        const number = safeWhatsAppNumber(whatsappNumber)
+        if (!number) {
+          toast.success('تم تسجيل طلبك بنجاح', {
+            description: 'سيتواصل معك المطعم لتأكيده.',
+          })
+        } else {
+          const message = [
+            'طلب جديد من المنيو الرقمي',
+            '',
+            `رقم الطلب: ${order.id.slice(0, 8)}`,
+            `الاسم: ${customerName}`,
+            `الهاتف: ${customerPhone}`,
+            customerAddress ? `العنوان: ${customerAddress}` : '',
+            '',
+            ...order.items.map(
+              (item) =>
+                `• ${item.name} × ${item.quantity} — ${Number(item.total).toLocaleString('ar-IQ')} د.ع`
+            ),
+            '',
+            `الإجمالي: ${Number(order.total_amount).toLocaleString('ar-IQ')} د.ع`,
+          ]
+            .filter(Boolean)
+            .join('\n')
+          const popup = window.open(
+            `https://wa.me/${number}?text=${encodeURIComponent(message)}`,
+            '_blank',
+            'noopener,noreferrer'
+          )
+          toast.success('تم تسجيل الطلب', {
+            description: popup
+              ? 'يفتح واتساب لإرسال نسخة الطلب.'
+              : 'سيتواصل معك المطعم لتأكيده.',
+          })
+        }
+      } else {
+        toast.success('تم إرسال طلبك بنجاح', {
+          description: `الإجمالي المؤكد ${Number(order.total_amount).toLocaleString('ar-IQ')} د.ع`,
+        })
       }
 
-      const message = [
-        'طلب جديد من المنيو الرقمي:',
-        '',
-        `👤 الاسم: ${customerInfo.name}`,
-        `📞 الهاتف: ${customerInfo.phone}`,
-        customerInfo.address ? `📍 العنوان: ${customerInfo.address}` : '',
-        '',
-        '🛒 الوجبات المطلوبة:',
-        ...items.map(
-          (item) =>
-            `- ${item.name} × ${item.quantity} - ${(item.price ?? 0).toLocaleString('ar-IQ')} د.ع`
-        ),
-        '',
-        `💰 الإجمالي النهائي: ${(subtotal ?? 0).toLocaleString('ar-IQ')} د.ع`,
-      ]
-        .filter(Boolean)
-        .join('\n')
-
-      const encodedMessage = encodeURIComponent(message)
-      const url = `https://wa.me/${whatsappNumber}?text=${encodedMessage}`
-
-      window.open(url, '_blank')
-      toast('تم توجيه الطلب إلى واتساب', {
-        description: 'سيتم فتح واتساب لإتمام الطلب.',
-      })
       clear()
-      setCheckoutStep('items')
-      onOpenChange(false)
-      return
-    }
-
-    // system mode
-    setIsSubmitting(true)
-    try {
-      await createOrder.mutateAsync({
-        customer_name: customerInfo.name,
-        customer_phone: customerInfo.phone,
-        customer_address: customerInfo.address || null,
-        items: items.map((item) => ({
-          menu_item_id: item.id,
-          name: item.name,
-          price: item.price,
-          quantity: item.quantity,
-          total: item.price * item.quantity,
-        })),
-        discount_code: null,
-        discount_amount: discountAmount,
-        total: subtotal,
-      })
-
-      toast('تم إرسال الطلب بنجاح', {
-        description: `مبلغ ${(subtotal ?? 0).toLocaleString('ar-IQ')} د.ع`,
-      })
-      clear()
-      setCheckoutStep('items')
-      onOpenChange(false)
-    } catch {
-      toast.error('تعذر إرسال الطلب. حاول مرة أخرى.')
+      setCustomerInfo({ name: '', phone: '', address: '' })
+      setPromoCode('')
+      closeCart()
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : 'تعذر إرسال الطلب. راجع الأصناف وحاول مرة أخرى.'
+      )
     } finally {
       setIsSubmitting(false)
     }
@@ -133,237 +214,296 @@ export function CartSheet({ open, onOpenChange, restaurantId }: CartSheetProps) 
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side='right'
-        className='max-w-sm w-full h-full bg-background p-0'
+        dir='rtl'
+        className='flex h-full w-full max-w-md flex-col bg-background p-0'
       >
-        {/* Step 1: Cart Items */}
+        <div className='flex items-center justify-between border-b border-border px-5 py-4'>
+          <div className='flex items-center gap-2'>
+            {checkoutStep !== 'items' && (
+              <Button
+                type='button'
+                variant='ghost'
+                size='icon'
+                className='size-8'
+                onClick={() =>
+                  setCheckoutStep(
+                    checkoutStep === 'confirm' ? 'customer' : 'items'
+                  )
+                }
+                aria-label='رجوع'
+              >
+                <ArrowRight className='size-4' />
+              </Button>
+            )}
+            <SheetTitle className='text-lg font-extrabold'>
+              {checkoutStep === 'items'
+                ? 'سلة الطلب'
+                : checkoutStep === 'customer'
+                  ? 'بيانات الطلب'
+                  : 'تأكيد الطلب'}
+            </SheetTitle>
+          </div>
+          {checkoutStep === 'items' && (
+            <Badge variant='secondary'>{itemCount} قطعة</Badge>
+          )}
+        </div>
+
         {checkoutStep === 'items' && (
           <>
-            <div className='p-4 border-b border-border'>
-              <div className='flex items-center justify-between gap-2'>
-                <SheetTitle className='text-lg font-bold'>سلة الطلبات</SheetTitle>
-                <span className='flex items-center gap-1 text-muted-foreground'>
-                  <ShoppingCart className='size-4' />
-                  <span className='text-sm font-medium'>{itemCount} صنف</span>
-                </span>
-              </div>
-            </div>
-
             {items.length === 0 ? (
-              <div className='flex flex-col items-center justify-center gap-2 px-6 py-20 text-center text-muted-foreground'>
-                <ShoppingCart className='size-12 opacity-40' />
-                <p>سلتك فارغة حالياً.</p>
+              <div className='flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center text-muted-foreground'>
+                <div className='flex size-16 items-center justify-center rounded-3xl bg-muted'>
+                  <ShoppingBag className='size-7' />
+                </div>
+                <p className='font-medium'>السلة تنتظر اختياراتك</p>
               </div>
             ) : (
-              <div className='flex-1 overflow-y-auto divide-y divide-border px-4'>
+              <div className='flex-1 divide-y divide-border overflow-y-auto px-5'>
                 {items.map((item) => {
+                  const image = publicImageUrl(item.imagePath)
                   return (
-                    <div key={item.id} className='flex items-center gap-3 p-3'>
-                      <div className='relative shrink-0 overflow-hidden rounded-md border border-muted/40'>
-                        {item.imagePath ? (
-                          <img
-                            src={item.imagePath || 'رابط_صورة_افتراضية_أو_فارغ'}
-                            alt={item.name}
-                            className='w-16 h-16 object-cover object-center'
-                          />
-                        ) : (
-                          <div className='flex w-16 h-16 items-center justify-center bg-muted text-muted-foreground'>
-                            <span className='text-[10px]'>صورة</span>
-                          </div>
-                        )}
-                      </div>
-                      <div className='flex-1 min-w-0'>
-                        <p className='text-sm font-semibold truncate'>{item.name}</p>
-                        <p className='text-xs text-muted-foreground' dir='ltr'>
-                          {item.price.toFixed(2)} د.ع × {item.quantity}
+                    <div key={item.lineId} className='flex gap-3 py-4'>
+                      {image ? (
+                        <img
+                          src={image}
+                          alt=''
+                          className='size-16 rounded-xl object-cover'
+                        />
+                      ) : (
+                        <div className='flex size-16 items-center justify-center rounded-xl bg-muted text-xs text-muted-foreground'>
+                          صورة
+                        </div>
+                      )}
+                      <div className='min-w-0 flex-1'>
+                        <p className='truncate text-sm font-bold'>
+                          {item.name}
                         </p>
+                        {item.notes && (
+                          <p className='mt-0.5 line-clamp-1 text-xs text-muted-foreground'>
+                            {item.notes}
+                          </p>
+                        )}
+                        <p className='mt-1 text-xs font-semibold text-primary'>
+                          {item.price.toLocaleString('ar-IQ')} د.ع
+                        </p>
+                        <div className='mt-2 flex items-center gap-2'>
+                          <Button
+                            type='button'
+                            variant='outline'
+                            size='icon'
+                            className='size-7'
+                            onClick={() =>
+                              setQuantity(item.lineId, item.quantity - 1)
+                            }
+                            aria-label='إنقاص الكمية'
+                          >
+                            <Minus className='size-3.5' />
+                          </Button>
+                          <span className='min-w-5 text-center text-sm font-bold'>
+                            {item.quantity}
+                          </span>
+                          <Button
+                            type='button'
+                            variant='outline'
+                            size='icon'
+                            className='size-7'
+                            disabled={item.quantity >= MAX_CART_ITEM_QUANTITY}
+                            onClick={() =>
+                              setQuantity(item.lineId, item.quantity + 1)
+                            }
+                            aria-label='زيادة الكمية'
+                          >
+                            <Plus className='size-3.5' />
+                          </Button>
+                        </div>
                       </div>
-                      <div className='flex items-center gap-2'>
-                        <Button
-                          type='button'
-                          variant='outline'
-                          size='sm'
-                          className='h-8 w-8 p-0'
-                          onClick={() =>
-                            setQuantity(item.id, Math.max(0, item.quantity - 1))
-                          }
-                        >
-                          <Minus className='size-4' />
-                        </Button>
-                        <Badge className='text-[11px] leading-none'>
-                          {item.quantity}
-                        </Badge>
-                        <Button
-                          type='button'
-                          variant='outline'
-                          size='sm'
-                          className='h-8 w-8 p-0'
-                          onClick={() => setQuantity(item.id, item.quantity + 1)}
-                        >
-                          <Plus className='size-4' />
-                        </Button>
-                        <Button
-                          type='button'
-                          variant='ghost'
-                          size='sm'
-                          className='h-8 w-8 p-0 text-muted-foreground hover:text-destructive'
-                          onClick={() => removeItem(item.id)}
-                        >
-                          <Trash2 className='size-4' />
-                        </Button>
-                      </div>
+                      <Button
+                        type='button'
+                        variant='ghost'
+                        size='icon'
+                        className='size-8 text-muted-foreground hover:text-destructive'
+                        onClick={() => removeItem(item.lineId)}
+                        aria-label={`حذف ${item.name}`}
+                      >
+                        <Trash2 className='size-4' />
+                      </Button>
                     </div>
                   )
                 })}
               </div>
             )}
-
-            {/* Sticky Footer */}
-            <div className='border-t border-border bg-background p-4'>
-              <div className='space-y-2'>
-                <div className='flex items-center justify-between text-sm'>
-                  <span className='text-muted-foreground'>المجموع الفرعي</span>
-                  <span dir='ltr' className='font-medium'>
-                    {(subtotal ?? 0).toLocaleString('ar-IQ')} د.ع
-                  </span>
-                </div>
-                {discountAmount > 0 && (
-                  <div className='flex items-center justify-between text-sm'>
-                    <span className='text-muted-foreground'>الخصم</span>
-                    <span dir='ltr' className='font-medium text-red-600'>
-                      -{(discountAmount ?? 0).toLocaleString('ar-IQ')} د.ع
-                    </span>
-                  </div>
-                )}
-                <div className='flex items-center justify-between border-t border-border pt-2 mt-2 text-lg font-bold'>
-                  <span>الإجمالي النهائي</span>
-                  <span dir='ltr' className='text-primary'>
-                    {(subtotal ?? 0).toLocaleString('ar-IQ')} د.ع
-                  </span>
-                </div>
+            <div className='border-t border-border bg-background p-5'>
+              <div className='mb-4 flex items-end justify-between'>
+                <span className='text-sm text-muted-foreground'>
+                  المجموع المتوقع
+                </span>
+                <strong className='text-lg'>
+                  {subtotal.toLocaleString('ar-IQ')} د.ع
+                </strong>
               </div>
+              <label className='mb-3 block'>
+                <span className='mb-1.5 block text-xs font-medium text-muted-foreground'>
+                  كود الخصم (اختياري)
+                </span>
+                <Input
+                  value={promoCode}
+                  maxLength={64}
+                  onChange={(event) => setPromoCode(event.target.value)}
+                  placeholder='أدخل كود الخصم'
+                  className='h-9'
+                />
+              </label>
               <Button
                 type='button'
-                className='w-full mt-4 py-3 text-lg font-bold'
+                className='w-full py-5 font-bold'
+                disabled={!items.length || !meetsZoneMinimum}
                 onClick={() => setCheckoutStep('customer')}
               >
-                متابعة لإدخال بيانات العميل
+                متابعة الطلب
               </Button>
-              <div className='mt-2 text-xs text-muted-foreground text-center'>
-                يرجى مراجعة المنيو لإتمام الدفع والاستلام من المطعم.
-              </div>
+              <p className='mt-2 text-center text-[11px] text-muted-foreground'>
+                سيؤكّد المطعم السعر والتوفّر قبل اعتماد الطلب.
+              </p>
+              {selectedZone && !meetsZoneMinimum && <p className='mt-2 text-center text-[11px] text-destructive'>الحد الأدنى لمنطقة {selectedZone.name}: {selectedZone.minimum_order.toLocaleString('ar-IQ')} د.ع</p>}
             </div>
           </>
         )}
 
-        {/* Step 2: Customer Info */}
         {checkoutStep === 'customer' && (
-          <>
-            <div className='p-4 border-b border-border flex items-center justify-between'>
-              <Button
-                type='button'
-                variant='ghost'
-                size='sm'
-                onClick={() => setCheckoutStep('items')}
-              >
-                ← العودة
-              </Button>
-              <SheetTitle className='text-lg font-bold'>بيانات العميل</SheetTitle>
-            </div>
-            <form className='p-4 space-y-4' onSubmit={(e) => { e.preventDefault(); setCheckoutStep('confirm') }}>
+          <form
+            className='flex flex-1 flex-col p-5'
+            onSubmit={(event) => {
+              event.preventDefault()
+              if (customerValid) setCheckoutStep('confirm')
+            }}
+          >
+            <div className='space-y-4'>
               <div className='space-y-2'>
-                <Label htmlFor='customer_name'>الاسم الكامل</Label>
+                <Label htmlFor='customer-name'>الاسم</Label>
                 <Input
-                  id='customer_name'
-                  placeholder='أدخل اسمك الكامل'
+                  id='customer-name'
+                  autoComplete='name'
                   value={customerInfo.name}
-                  onChange={(e) =>
-                    setCustomerInfo({ ...customerInfo, name: e.target.value })
+                  maxLength={80}
+                  onChange={(event) =>
+                    setCustomerInfo((current) => ({
+                      ...current,
+                      name: event.target.value,
+                    }))
                   }
+                  placeholder='اسم المستلم'
                   required
                 />
               </div>
               <div className='space-y-2'>
-                <Label htmlFor='customer_phone'>رقم الهاتف</Label>
+                <Label htmlFor='customer-phone'>رقم الهاتف</Label>
                 <Input
-                  id='customer_phone'
-                  type='tel'
-                  placeholder='+964 7XX XXX XXX'
+                  id='customer-phone'
+                  autoComplete='tel'
+                  inputMode='tel'
                   value={customerInfo.phone}
-                  onChange={(e) =>
-                    setCustomerInfo({ ...customerInfo, phone: e.target.value })
+                  maxLength={25}
+                  onChange={(event) =>
+                    setCustomerInfo((current) => ({
+                      ...current,
+                      phone: event.target.value,
+                    }))
                   }
+                  placeholder='+964 7XX XXX XXXX'
                   required
                 />
+                <p className='text-xs text-muted-foreground'>
+                  سنستخدمه فقط لتأكيد الطلب.
+                </p>
               </div>
               <div className='space-y-2'>
-                <Label htmlFor='customer_address'>العنوان (اختياري)</Label>
+                <Label htmlFor='customer-address'>
+                  العنوان{' '}
+                  <span className='text-muted-foreground'>(اختياري)</span>
+                </Label>
                 <Input
-                  id='customer_address'
-                  placeholder='شارع، حي، المدينة'
+                  id='customer-address'
+                  autoComplete='street-address'
                   value={customerInfo.address}
-                  onChange={(e) =>
-                    setCustomerInfo({ ...customerInfo, address: e.target.value })
+                  maxLength={240}
+                  onChange={(event) =>
+                    setCustomerInfo((current) => ({
+                      ...current,
+                      address: event.target.value,
+                    }))
                   }
+                  placeholder='المنطقة، الشارع، أقرب نقطة دالة'
                 />
               </div>
-              <Button
-                type='submit'
-                className='w-full'
-                disabled={!customerInfo.name || !customerInfo.phone}
-              >
-                متابعة للتأكيد
-              </Button>
-            </form>
-          </>
+              {deliveryZones.length > 0 && <div className='space-y-2'>
+                <Label htmlFor='delivery-zone'>منطقة التوصيل</Label>
+                <select id='delivery-zone' value={deliveryZoneId} onChange={(event) => setDeliveryZoneId(event.target.value)} className='flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm'>
+                  <option value=''>اختر المنطقة</option>
+                  {deliveryZones.map((zone) => <option key={zone.id} value={zone.id}>{zone.name} — {zone.delivery_fee.toLocaleString('ar-IQ')} د.ع</option>)}
+                </select>
+                {selectedZone && <p className='text-xs text-muted-foreground'>سعر التوصيل: {deliveryFee.toLocaleString('ar-IQ')} د.ع</p>}
+              </div>}
+            </div>
+            {!customerInfo.phone || validPhone(customerInfo.phone) ? null : (
+              <p className='mt-3 text-xs text-destructive'>
+                أدخل رقم هاتف صالحًا.
+              </p>
+            )}
+            <Button
+              type='submit'
+              className='mt-auto w-full py-5 font-bold'
+              disabled={!customerValid || !meetsZoneMinimum || (deliveryZones.length > 0 && !deliveryZoneId)}
+            >
+              مراجعة الطلب
+            </Button>
+          </form>
         )}
 
-        {/* Step 3: Confirm */}
         {checkoutStep === 'confirm' && (
-          <>
-            <div className='p-4 border-b border-border flex items-center justify-between'>
-              <Button
-                type='button'
-                variant='ghost'
-                size='sm'
-                onClick={() => setCheckoutStep('customer')}
-              >
-                ← العودة
-              </Button>
-              <SheetTitle className='text-lg font-bold'>تأكيد الطلب</SheetTitle>
-            </div>
-            <div className='p-4 space-y-4'>
-              <div className='space-y-2'>
-                <p className='text-sm text-muted-foreground'>الاسم</p>
-                <p className='font-medium'>{customerInfo.name}</p>
-              </div>
-              <div className='space-y-2'>
-                <p className='text-sm text-muted-foreground'>الهاتف</p>
-                <p className='font-medium'>{customerInfo.phone}</p>
-              </div>
-              {customerInfo.address && (
-                <div className='space-y-2'>
-                  <p className='text-sm text-muted-foreground'>العنوان</p>
-                  <p className='font-medium'>{customerInfo.address}</p>
-                </div>
+          <div className='flex flex-1 flex-col p-5'>
+            <div className='rounded-2xl bg-muted/55 p-4 text-sm'>
+              <p className='font-bold'>{customerName}</p>
+              <p className='mt-1 text-muted-foreground' dir='ltr'>
+                {customerPhone}
+              </p>
+              {customerAddress && (
+                <p className='mt-1 text-muted-foreground'>{customerAddress}</p>
               )}
-              <div className='border-t border-border pt-4 space-y-2'>
-                <div className='flex items-center justify-between text-sm'>
-                  <span className='text-muted-foreground'>الإجمالي النهائي</span>
-                  <span dir='ltr' className='font-bold text-lg text-primary'>
-                    {(subtotal ?? 0).toLocaleString('ar-IQ')} د.ع
+            </div>
+            <div className='mt-5 space-y-2 border-b border-border pb-5 text-sm'>
+              {items.map((item) => (
+                <div key={item.lineId} className='flex justify-between gap-3'>
+                  <span className='truncate'>
+                    {item.name} × {item.quantity}
+                  </span>
+                  <span className='shrink-0'>
+                    {(item.price * item.quantity).toLocaleString('ar-IQ')} د.ع
                   </span>
                 </div>
-              </div>
-              <Button
-                type='button'
-                className='w-full py-3 text-lg font-bold'
-                disabled={isSubmitting}
-                onClick={handleCheckout}
-              >
-                {isSubmitting ? 'جارٍ الإرسال...' : 'إرسال الطلب'}
-              </Button>
+              ))}
             </div>
-          </>
+            <div className='mt-4 flex justify-between text-lg font-extrabold'>
+              <span>الإجمالي المتوقع</span>
+              <span>{totalWithDelivery.toLocaleString('ar-IQ')} د.ع</span>
+            </div>
+            {selectedZone && <div className='mt-2 flex justify-between text-xs text-muted-foreground'><span>التوصيل إلى {selectedZone.name}</span><span>{deliveryFee.toLocaleString('ar-IQ')} د.ع</span></div>}
+            {promoCode.trim() && (
+              <p className='mt-2 text-xs text-muted-foreground'>
+                سيتم التحقق من كود «{promoCode.trim()}» عند الإرسال.
+              </p>
+            )}
+            <p className='mt-3 text-xs leading-5 text-muted-foreground'>
+              يتم التحقق من أسعار الأصناف وتوفّرها على الخادم لحظة الإرسال.
+            </p>
+            <Button
+              type='button'
+              className='mt-auto w-full py-5 font-bold'
+              disabled={isSubmitting || !items.length}
+              onClick={handleCheckout}
+            >
+              {isSubmitting ? 'جارٍ إرسال الطلب…' : 'تأكيد وإرسال الطلب'}
+            </Button>
+          </div>
         )}
       </SheetContent>
     </Sheet>

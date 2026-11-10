@@ -1,112 +1,71 @@
+import type { useLanguage } from '@/i18n'
 import {
-  LayoutDashboard,
-  ClipboardList,
-  LayoutGrid,
-  Layout,
-  UtensilsCrossed,
   BadgePercent,
-  Palette,
-  Users,
   BarChart3,
-  QrCode,
-  Settings,
+  ClipboardList,
   Command,
   Grid,
+  Layout,
+  LayoutDashboard,
+  LayoutGrid,
+  QrCode,
+  Settings,
+  Users,
+  UtensilsCrossed,
 } from 'lucide-react'
-import { type SidebarData } from '../types'
+import type { SidebarData } from '../types'
 
-export const sidebarData: SidebarData = {
-  user: {
-    name: 'مالك المطعم',
-    email: 'owner@menuz.app',
-    avatar: '/avatars/shadcn.jpg',
-  },
-  teams: [
-    {
-      name: 'Menuz',
-      logo: Command,
-      plan: 'نظام تشغيل المطاعم',
+type Translate = ReturnType<typeof useLanguage>['t']
+
+export function createSidebarData(t: Translate): SidebarData {
+  return {
+    user: {
+      name: 'Restaurant owner',
+      email: 'owner@menuz.app',
+      avatar: '/avatars/shadcn.jpg',
     },
-  ],
-  navGroups: [
-    {
-      title: 'الرئيسية',
-      items: [
-        {
-          title: 'نظرة عامة',
-          url: '/dashboard',
-          icon: LayoutDashboard,
-        },
-        {
-          title: 'الطلبات',
-          url: '/orders',
-          icon: ClipboardList,
-        },
-        {
-          title: 'الطاولات',
-          url: '/tables',
-          icon: LayoutGrid,
-        },
-        {
-          title: 'القائمة',
-          url: '/menu',
-          icon: UtensilsCrossed,
-        },
-        {
-          title: 'صانع القوائم',
-          url: '/menu-builder',
-          icon: Layout,
-        },
-        {
-          title: 'العروض',
-          url: '/offers',
-          icon: BadgePercent,
-        },
-      ],
-    },
-    {
-      title: 'المطعم',
-      items: [
-        {
-          title: 'الهوية البصرية',
-          url: '/branding',
-          icon: Palette,
-        },
-        {
-          title: 'الموظفون',
-          url: '/staff',
-          icon: Users,
-        },
-        {
-          title: 'التحليلات',
-          url: '/analytics',
-          icon: BarChart3,
-        },
-        {
-          title: 'أكواد QR',
-          url: '/qr-codes',
-          icon: QrCode,
-        },
-        {
-          title: 'التطبيقات',
-          url: '/apps',
-          icon: Grid,
-        },
-      ],
-    },
-    {
-      title: 'أخرى',
-      items: [
-        {
-          title: 'الإعدادات',
-          icon: Settings,
-          items: [
-            { title: 'الملف الشخصي', url: '/settings' },
-            { title: 'الحساب', url: '/settings/account' },
-            { title: 'إعدادات الطلبات', url: '/settings/restaurant-ordering' },
-          ],
-        },
-      ],
-    },
-  ],
+    teams: [{ name: t('app.name'), logo: Command, plan: t('app.tagline') }],
+    navGroups: [
+      {
+        title: t('nav.workspace'),
+        items: [
+          {
+            title: t('nav.dashboard'),
+            url: '/dashboard',
+            icon: LayoutDashboard,
+          },
+          { title: t('nav.orders'), url: '/orders', icon: ClipboardList },
+          { title: t('nav.tables'), url: '/tables', icon: LayoutGrid },
+          { title: t('nav.menu'), url: '/menu', icon: UtensilsCrossed },
+          { title: t('nav.builder'), url: '/menu-builder', icon: Layout },
+          { title: t('nav.offers'), url: '/offers', icon: BadgePercent },
+        ],
+      },
+      {
+        title: t('nav.restaurant'),
+        items: [
+          { title: t('nav.staff'), url: '/staff', icon: Users },
+          { title: t('nav.analytics'), url: '/analytics', icon: BarChart3 },
+          { title: t('nav.apps'), url: '/apps', icon: Grid },
+          { title: t('qr.title'), url: '/qr-codes', icon: QrCode },
+        ],
+      },
+      {
+        title: t('nav.settings'),
+        items: [
+          {
+            title: t('nav.settings'),
+            icon: Settings,
+            items: [
+              { title: t('nav.account'), url: '/settings/account' },
+              {
+                title: t('nav.orderSettings'),
+                url: '/settings/restaurant-ordering',
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  }
 }

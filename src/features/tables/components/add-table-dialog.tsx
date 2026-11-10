@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { useCreateTable } from '../api'
+import { useLanguage } from '@/i18n'
 
 const schema = z.object({
   label: z.string().min(1, 'الرجاء إدخال اسم/رقم الطاولة.'),
@@ -33,6 +34,7 @@ interface AddTableDialogProps {
 }
 
 export function AddTableDialog({ open, onOpenChange }: AddTableDialogProps) {
+  const { language, t } = useLanguage()
   const createTable = useCreateTable()
 
   const form = useForm<z.infer<typeof schema>>({
@@ -47,10 +49,10 @@ export function AddTableDialog({ open, onOpenChange }: AddTableDialogProps) {
   async function onSubmit(values: z.infer<typeof schema>) {
     try {
       await createTable.mutateAsync(values.label)
-      toast.success('تمت إضافة الطاولة.')
+      toast.success(language === 'ar' ? 'تمت إضافة الطاولة.' : 'Table added.')
       onOpenChange(false)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'تعذر إضافة الطاولة.')
+      toast.error(err instanceof Error ? err.message : language === 'ar' ? 'تعذر إضافة الطاولة.' : 'Unable to add the table.')
     }
   }
 
@@ -58,7 +60,7 @@ export function AddTableDialog({ open, onOpenChange }: AddTableDialogProps) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className='sm:max-w-sm'>
         <DialogHeader>
-          <DialogTitle>إضافة طاولة جديدة</DialogTitle>
+          <DialogTitle>{language === 'ar' ? 'إضافة طاولة جديدة' : 'Add a new table'}</DialogTitle>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className='grid gap-4'>
@@ -67,9 +69,9 @@ export function AddTableDialog({ open, onOpenChange }: AddTableDialogProps) {
               name='label'
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>اسم/رقم الطاولة</FormLabel>
+                  <FormLabel>{language === 'ar' ? 'اسم/رقم الطاولة' : 'Table name or number'}</FormLabel>
                   <FormControl>
-                    <Input placeholder='طاولة 5' {...field} />
+                    <Input placeholder={language === 'ar' ? 'طاولة 5' : 'Table 5'} {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -78,7 +80,7 @@ export function AddTableDialog({ open, onOpenChange }: AddTableDialogProps) {
             <DialogFooter>
               <Button type='submit' disabled={createTable.isPending}>
                 {createTable.isPending && <Loader2 className='animate-spin' />}
-                إضافة
+                {t('common.add')}
               </Button>
             </DialogFooter>
           </form>

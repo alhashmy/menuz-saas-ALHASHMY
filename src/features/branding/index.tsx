@@ -1,14 +1,11 @@
 import { useEffect, useState } from 'react'
 import { Loader2, Save, Sparkles, Upload } from 'lucide-react'
 import { toast } from 'sonner'
-import { getMenuImageUrl, uploadMenuImage } from '@/lib/supabase'
 import { useAuthStore } from '@/stores/auth-store'
+import { getMenuImageUrl, uploadMenuImage } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Header } from '@/components/layout/header'
 import { Label } from '@/components/ui/label'
-import { Main } from '@/components/layout/main'
-import { ProfileDropdown } from '@/components/profile-dropdown'
 import {
   Select,
   SelectContent,
@@ -16,6 +13,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Header } from '@/components/layout/header'
+import { Main } from '@/components/layout/main'
+import { ProfileDropdown } from '@/components/profile-dropdown'
 import { ThemeSwitch } from '@/components/theme-switch'
 import { useRestaurantBranding, useUpdateBranding } from './api'
 import { ColorField } from './components/color-field'
@@ -31,7 +31,9 @@ export function BrandingManagement() {
 
   const [primaryColor, setPrimaryColor] = useState('#0ea5e9')
   const [accentColor, setAccentColor] = useState('#f97316')
-  const [themeMode, setThemeMode] = useState<'light' | 'dark' | 'system'>('dark')
+  const [themeMode, setThemeMode] = useState<'light' | 'dark' | 'system'>(
+    'dark'
+  )
   const [menuStyle, setMenuStyle] = useState<string>('classic-grid')
   const [logoPath, setLogoPath] = useState<string | null>(null)
   const [logoFile, setLogoFile] = useState<File | null>(null)
@@ -51,7 +53,11 @@ export function BrandingManagement() {
     try {
       let finalLogoPath = logoPath
       if (logoFile && restaurantId) {
-        finalLogoPath = await uploadMenuImage(restaurantId, 'branding', logoFile)
+        finalLogoPath = await uploadMenuImage(
+          restaurantId,
+          'branding',
+          logoFile
+        )
         setLogoFile(null)
       }
 
@@ -125,7 +131,9 @@ export function BrandingManagement() {
                         type='file'
                         accept='image/*'
                         className='hidden'
-                        onChange={(e) => setLogoFile(e.target.files?.[0] ?? null)}
+                        onChange={(e) =>
+                          setLogoFile(e.target.files?.[0] ?? null)
+                        }
                       />
                     </label>
                   </div>
@@ -160,7 +168,8 @@ export function BrandingManagement() {
                     </SelectContent>
                   </Select>
                   <p className='text-xs text-muted-foreground'>
-                    بعض القوالب أدناه تفرض وضعاً داكناً أو فاتحاً دائماً بغض النظر عن هذا الإعداد.
+                    بعض القوالب أدناه تفرض وضعاً داكناً أو فاتحاً دائماً بغض
+                    النظر عن هذا الإعداد.
                   </p>
                 </div>
 
@@ -169,7 +178,9 @@ export function BrandingManagement() {
                   onClick={handleSave}
                   disabled={updateBranding.isPending}
                 >
-                  {updateBranding.isPending && <Loader2 className='animate-spin' />}
+                  {updateBranding.isPending && (
+                    <Loader2 className='animate-spin' />
+                  )}
                   <Save className='size-4' /> حفظ التغييرات
                 </Button>
               </CardContent>
@@ -195,7 +206,8 @@ export function BrandingManagement() {
               <CardHeader>
                 <CardTitle>قالب القائمة</CardTitle>
                 <p className='text-sm text-muted-foreground'>
-                  اختر أحد القوالب الجاهزة العشرة؛ بعضها يحمل تأثيرات حركة (
+                  اختر إحدى الهويات الخمس الجاهزة؛ ويمكنك تخصيص اللونين والشعار
+                  مع كل هوية (
                   <span className='inline-flex items-center gap-1'>
                     <Sparkles className='size-3.5' /> فخم
                   </span>

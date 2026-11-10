@@ -178,7 +178,8 @@ function checkIsActive(href: string | undefined, item: NavItem, mainNav = false)
   return (
     href === item.url ||
     href.split('?')[0] === item.url ||
-    !!item?.items?.filter((i) => i?.url === href).length ||
+    !!((item as unknown as { items?: { url?: string }[] })?.items
+      ?.filter((i) => i?.url === href).length) ||
     (mainNav &&
       href.split('/')[1] !== '' &&
       href.split('/')[1] === item?.url?.split('/')[1])

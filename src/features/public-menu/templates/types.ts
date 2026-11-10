@@ -1,4 +1,9 @@
-export type MenuHeaderStyle = 'banner' | 'minimal' | 'centered' | 'split' | 'cover'
+export type MenuHeaderStyle =
+  | 'banner'
+  | 'minimal'
+  | 'centered'
+  | 'split'
+  | 'cover'
 export type MenuTabStyle = 'pills' | 'underline' | 'boxed' | 'minimal'
 export type MenuCardLayout =
   | 'grid' // بطاقات شبكية عمودية
@@ -27,7 +32,7 @@ export interface MenuTemplate {
   animation: MenuAnimation
   /** إضافة زخرفة إطار/فاصل بين الأقسام */
   ornamented?: boolean
-  /** ألوان افتراضية مقترحة للمعاينة فقط (المستخدم يبقى قادراً على تغييرها لاحقاً) */
+  /** ألوان افتراضية للمعاينة؛ يمكن للمطعم تخصيصها لاحقاً. */
   previewPrimary: string
   previewAccent: string
 }

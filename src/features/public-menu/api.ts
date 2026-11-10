@@ -26,6 +26,10 @@ export interface PublicRestaurant {
   slug: string
   name: string
   name_ar: string | null
+  description: string | null
+  is_open: boolean
+  google_maps_url: string | null
+  waze_url: string | null
 }
 
 export interface PublicBranding {
@@ -37,10 +41,45 @@ export interface PublicBranding {
   logo_path: string | null
   /** نمط العرض المحفوظ من منشئ القوائم (JSONB) */
   style: {
-    layout: 'list' | 'grid-2' | 'grid-3' | 'cards'
+    menuTemplate?:
+      | 'aurora'
+      | 'noir'
+      | 'souk'
+      | 'volt'
+      | 'bustan'
+      | 'ivory'
+      | 'neon'
+      | 'majesty'
+      | 'cafe'
+      | 'market'
+      | 'modern'
+      | 'delivery'
+      | 'delivery-app'
+    layoutTemplate: 'grid-cards' | 'visual-categories' | 'list-categories'
+    themeMode: 'light' | 'dark'
     accentColor: string
+    secondaryColor?: string
+    gradientAngle?: number
+    backgroundColor?: string
+    neonLineEnabled?: boolean
+    socialLinks?: {
+      whatsapp: string
+      instagram: string
+      facebook: string
+      tiktok: string
+    }
+    socialVisibility?: {
+      whatsapp: boolean
+      instagram: boolean
+      facebook: boolean
+      tiktok: boolean
+    }
+    entryAdEnabled?: boolean
+    entryAdImageUrl?: string | null
+    entryAdTitle?: string
+    entryAdMessage?: string
+    isOpen: boolean
     bannerUrls: string[]
-    neonEnabled: boolean
   } | null
 }
 
@@ -75,11 +114,12 @@ export function applyItemOffer(
   price: number,
   offer: PublicItemOffer | undefined
 ): { finalPrice: number; hasDiscount: boolean } {
-  if (!offer) return { finalPrice: price, hasDiscount: false }
+  const safePrice = Number.isFinite(price) && price >= 0 ? price : 0
+  if (!offer) return { finalPrice: safePrice, hasDiscount: false }
   const discounted =
     offer.discount_kind === 'percentage'
-      ? price - (price * offer.discount_value) / 100
-      : price - offer.discount_value
+      ? safePrice - (safePrice * offer.discount_value) / 100
+      : safePrice - offer.discount_value
   return { finalPrice: Math.max(0, discounted), hasDiscount: true }
 }
 
@@ -89,7 +129,9 @@ export function usePublicMenu(restaurantSlug: string) {
     queryFn: async (): Promise<PublicMenuData> => {
       const { data: restaurant, error: restaurantError } = await supabase
         .from('restaurants')
-        .select('id, slug, name, name_ar')
+        .select(
+          'id, slug, name, name_ar, description, is_open, google_maps_url, waze_url'
+        )
         .eq('slug', restaurantSlug)
         .eq('is_active', true)
         .single()
@@ -105,7 +147,9 @@ export function usePublicMenu(restaurantSlug: string) {
       ] = await Promise.all([
         supabase
           .from('restaurant_branding')
-          .select('primary_color, accent_color, theme_mode, menu_style, logo_path, style')
+          .select(
+            'primary_color, accent_color, theme_mode, menu_style, logo_path, style'
+          )
           .eq('restaurant_id', restaurant.id)
           .maybeSingle(),
         supabase
@@ -115,10 +159,13 @@ export function usePublicMenu(restaurantSlug: string) {
           )
           .eq('restaurant_id', restaurant.id)
           .eq('is_active', true)
+          .eq('menu_items.is_available', true)
           .order('sort_order'),
         supabase
           .from('offers')
-          .select('id, title, title_ar, scope, discount_kind, discount_value, item_id, promo_code')
+          .select(
+            'id, title, title_ar, scope, discount_kind, discount_value, item_id, promo_code, starts_at, expires_at'
+          )
           .eq('restaurant_id', restaurant.id)
           .eq('is_active', true),
       ])
@@ -129,7 +176,18 @@ export function usePublicMenu(restaurantSlug: string) {
       const itemOffers: Record<string, PublicItemOffer> = {}
       const orderOffers: PublicOrderOffer[] = []
 
+      const now = Date.now()
       for (const offer of offers ?? []) {
+        // لا نظهر العروض المؤجلة أو المنتهية حتى لو كان الصف فعّالاً بالخطأ.
+        const startsAt =
+          'starts_at' in offer && offer.starts_at
+            ? Date.parse(offer.starts_at as string)
+            : null
+        const endsAt =
+          'expires_at' in offer && offer.expires_at
+            ? Date.parse(offer.expires_at as string)
+            : null
+        if ((startsAt && startsAt > now) || (endsAt && endsAt < now)) continue
         if (offer.scope === 'item' && offer.item_id) {
           itemOffers[offer.item_id] = {
             id: offer.id,
@@ -155,11 +213,12 @@ export function usePublicMenu(restaurantSlug: string) {
           name: cat.name,
           name_ar: cat.name_ar,
           sort_order: cat.sort_order,
-          items: ((cat.menu_items ?? []) as (PublicMenuItem & {
-            is_available: boolean
-            sort_order: number
-          })[])
-            .sort((a, b) => a.sort_order - b.sort_order),
+          items: (
+            (cat.menu_items ?? []) as (PublicMenuItem & {
+              is_available: boolean
+              sort_order: number
+            })[]
+          ).sort((a, b) => a.sort_order - b.sort_order),
         })
       )
 

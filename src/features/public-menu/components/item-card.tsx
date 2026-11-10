@@ -1,13 +1,20 @@
-import { UtensilsCrossed } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import type { CSSProperties } from 'react'
+import { Minus, Plus, UtensilsCrossed } from 'lucide-react'
 import { useCartStore } from '@/stores/cart-store'
-import { Button } from '@/components/ui/button'
+import { getMenuImageUrl } from '@/lib/supabase'
+import { cn } from '@/lib/utils'
+import {
+  applyItemOffer,
+  type PublicItemOffer,
+  type PublicMenuItem,
+} from '../api'
 import type { MenuTemplate } from '../templates/types'
-import { applyItemOffer, type PublicItemOffer, type PublicMenuItem } from '../api'
+import './item-card.css'
 
 interface ItemCardProps {
   item: PublicMenuItem
   accentColor: string
+  themeMode: 'light' | 'dark'
   template: MenuTemplate
   animationDelayMs?: number
   offer?: PublicItemOffer
@@ -15,109 +22,45 @@ interface ItemCardProps {
   isAvailable?: boolean
 }
 
-function PriceTag({
-  price,
-  offer,
-  accentColor,
-}: {
-  price: number
-  offer: PublicItemOffer | undefined
-  accentColor: string
-}) {
-  const { finalPrice, hasDiscount } = applyItemOffer(price, offer)
-
-  if (!hasDiscount) {
-    return (
-      <p className='text-lg font-bold text-primary' style={{ color: accentColor }}>
-        {finalPrice.toLocaleString('ar-IQ')} د.ع
-      </p>
-    )
-  }
-
-  return (
-    <div className='flex items-center gap-1.5'>
-      <p className='text-lg font-bold text-primary' style={{ color: accentColor }}>
-        {finalPrice.toLocaleString('ar-IQ')} د.ع
-      </p>
-      <p className='text-xs text-muted-foreground line-through'>
-        {price.toFixed(2)} د.ع
-      </p>
-    </div>
-  )
+function imageUrl(path: string | null) {
+  if (!path) return null
+  return path.startsWith('https://') || path.startsWith('http://')
+    ? path
+    : getMenuImageUrl(path)
 }
 
-function DiscountBadge({ offer }: { offer: PublicItemOffer | undefined }) {
-  if (!offer) return null
-  const label =
-    offer.discount_kind === 'percentage'
-      ? `-${offer.discount_value}%`
-      : `-${offer.discount_value} د.ع`
-  return (
-    <span className='absolute top-2 right-2 z-10 rounded-full bg-red-600 px-2 py-0.5 text-[10px] font-bold text-white shadow'>
-      {label}
-    </span>
-  )
-}
-
-function UnavailableBadge() {
-  return (
-    <span className='absolute top-2 left-2 z-10 rounded-full bg-red-600 px-2 py-0.5 text-[10px] font-bold text-white shadow'>
-      غير متوفر
-    </span>
-  )
-}
-
-function animationClass(template: MenuTemplate) {
-  switch (template.animation) {
-    case 'fade-up':
-      return 'menu-anim-fade-up'
-    case 'shimmer-gold':
-      return 'menu-anim-shimmer-gold'
-    case 'glow-pulse':
-      return 'menu-anim-glow-pulse'
-    case 'stagger-scale':
-      return 'menu-anim-stagger-scale'
-    default:
-      return ''
-  }
-}
-
-function placeholder(size: 'sm' | 'md') {
-  return size === 'sm' ? (
-    <div className='flex h-24 w-24 items-center justify-center bg-muted text-muted-foreground rounded-lg'>
-      <UtensilsCrossed className='size-5' />
-    </div>
-  ) : (
-    <div className='flex h-40 w-full items-center justify-center bg-muted text-muted-foreground rounded-lg'>
-      <UtensilsCrossed className='size-6' />
-    </div>
-  )
+function offerLabel(offer: PublicItemOffer) {
+  return offer.discount_kind === 'percentage'
+    ? `وفر ${offer.discount_value}%`
+    : `وفر ${offer.discount_value.toLocaleString('ar-IQ')} د.ع`
 }
 
 export function ItemCard({
   item,
   accentColor,
+  themeMode,
   template,
   animationDelayMs = 0,
   offer,
   onSelect,
   isAvailable = true,
 }: ItemCardProps) {
+  const { addItem, decreaseQuantity, increaseQuantity, items } = useCartStore()
   const name = item.name_ar ?? item.name
-  const desc = item.description_ar ?? item.description
-  const animClass = animationClass(template)
-  const style = {
-    animationDelay: `${animationDelayMs}ms`,
-  }
-  const unavailable = !isAvailable
-
-  const { addItem, increaseQuantity, decreaseQuantity, items } = useCartStore()
-  const cartItem = items.find((i) => i.id === item.id)
+  const description = item.description_ar ?? item.description
+  const image = imageUrl(item.image_path)
+  const cartItem = items.find(
+    (cartLine) => cartLine.id === item.id && !cartLine.notes
+  )
   const quantity = cartItem?.quantity ?? 0
-  const { finalPrice } = applyItemOffer(item.price, offer)
+  const { finalPrice, hasDiscount } = applyItemOffer(item.price, offer)
+  const cardStyle = {
+    animationDelay: `${animationDelayMs}ms`,
+    '--menu-item-accent': accentColor,
+  } as CSSProperties
 
   function addToCart() {
-    if (unavailable) return
+    if (!isAvailable) return
     addItem({
       id: item.id,
       name,
@@ -126,215 +69,92 @@ export function ItemCard({
     })
   }
 
-  function handleIncrease() {
-    if (unavailable) return
-    increaseQuantity(item.id)
+  function quantityDown() {
+    if (cartItem) decreaseQuantity(cartItem.lineId)
   }
 
-  function handleDecrease() {
-    if (unavailable) return
-    decreaseQuantity(item.id)
+  function quantityUp() {
+    if (cartItem) increaseQuantity(cartItem.lineId)
+    else addToCart()
   }
 
-  const isCompact = template.cardLayout === 'grid' || template.cardLayout === 'magazine'
-
-  function renderButtonArea() {
-    return (
-      <div className='mt-auto pt-4 w-full'>
-        {quantity === 0 ? (
-            <Button
-              type='button'
-              size='sm'
-              className={cn(
-                'w-full truncate py-1.5 px-2 text-xs font-bold',
-                isCompact ? 'text-[10px] leading-tight' : 'text-md',
-              )}
-              disabled={unavailable}
-              onClick={(e) => {
-                e.stopPropagation()
-                addToCart()
-              }}
-            >
-              {isCompact ? '+ أضف' : '+ إضافة إلى الطلب'}
-            </Button>
-        ) : (
-          <div className='flex items-center justify-between bg-muted rounded-md p-1 w-full border'>
-            <Button
-              type='button'
-              size='icon'
-              variant='secondary'
-              className='h-10 w-12 text-lg p-0'
-              disabled={unavailable}
-              onClick={(e) => {
-                e.stopPropagation()
-                handleDecrease()
-              }}
-            >
-              -
-            </Button>
-            <span className='font-bold text-lg px-4'>{quantity}</span>
-            <Button
-              type='button'
-              size='icon'
-              variant='default'
-              className='h-10 w-12 text-lg p-0'
-              disabled={unavailable}
-              onClick={(e) => {
-                e.stopPropagation()
-                handleIncrease()
-              }}
-            >
-              +
-            </Button>
-          </div>
-        )}
-      </div>
-    )
-  }
-
-  // Overlay: صورة خلفية أعلى النص، بطاقة واحدة بالعرض الكامل مع ارتفاع محدود
-  if (template.cardLayout === 'overlay') {
-    return (
-      <div
-        onClick={unavailable ? undefined : onSelect}
-        style={style}
-        className={cn(
-          'relative rounded-xl border bg-card text-start shadow-sm cursor-pointer',
-          unavailable && 'opacity-60 grayscale pointer-events-none',
-          template.id === 'glassmorphism' && 'menu-glass',
-          animClass
-        )}
-      >
-        <DiscountBadge offer={offer} />
-        {unavailable && <UnavailableBadge />}
-        <div className='relative h-40 w-full overflow-hidden rounded-xl'>
-          {item.image_path ? (
-            <img
-              src={item.image_path || 'رابط_صورة_افتراضية_أو_فارغ'}
-              alt={name}
-              className='w-full h-48 md:h-56 object-cover rounded-t-xl'
-            />
-          ) : (
-            placeholder('md')
-          )}
-          <div className='absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent rounded-xl' />
-          <div className='absolute inset-x-0 bottom-0 p-3'>
-            <h3 className='font-semibold text-white truncate'>{name}</h3>
-            <PriceTag price={item.price} offer={offer} accentColor={accentColor} />
-            {renderButtonArea()}
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  // Magazine: صورة كبيرة بعرض كامل فوق، نص تحتها (ارتفاع محدود)
-  if (template.cardLayout === 'magazine') {
-    return (
-      <div
-        onClick={unavailable ? undefined : onSelect}
-        style={style}
-        className={cn(
-          'relative w-full rounded-xl border bg-card text-start shadow-sm cursor-pointer',
-          unavailable && 'opacity-60 grayscale pointer-events-none',
-          animClass
-        )}
-      >
-        <div className='relative h-40 w-full overflow-hidden rounded-t-xl'>
-          <DiscountBadge offer={offer} />
-          {unavailable && <UnavailableBadge />}
-          {item.image_path ? (
-            <img
-              src={item.image_path || 'رابط_صورة_افتراضية_أو_فارغ'}
-              alt={name}
-              className='w-full h-48 md:h-56 object-cover rounded-t-xl'
-            />
-          ) : (
-            placeholder('md')
-          )}
-        </div>
-        <div className='p-3 pt-2'>
-          <h3 className='truncate text-base font-semibold mb-1'>{name}</h3>
-          {desc && <p className='mt-0 line-clamp-2 text-xs text-muted-foreground mb-2'>{desc}</p>}
-          <div className='mt-1'>
-            <PriceTag price={item.price} offer={offer} accentColor={accentColor} />
-            {renderButtonArea()}
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  // Grid: بطاقة عمودية مضغوطة (صورة فوق، نص تحت) ضمن شبكة عمودين
-  if (template.cardLayout === 'grid') {
-    return (
-      <div
-        onClick={unavailable ? undefined : onSelect}
-        style={style}
-        className={cn(
-          'flex flex-col rounded-xl border bg-card text-start shadow-sm cursor-pointer',
-          unavailable && 'opacity-60 grayscale pointer-events-none',
-          animClass
-        )}
-      >
-        <div className='relative h-40 w-full overflow-hidden'>
-          <DiscountBadge offer={offer} />
-          {unavailable && <UnavailableBadge />}
-          {item.image_path ? (
-            <img
-              src={item.image_path || 'رابط_صورة_افتراضية_أو_فارغ'}
-              alt={name}
-              className='w-full h-48 md:h-56 object-cover rounded-t-xl'
-            />
-          ) : (
-            placeholder('md')
-          )}
-        </div>
-        <div className='p-3 pt-2'>
-          <h3 className='truncate text-sm font-semibold mb-1'>{name}</h3>
-          <div className='mt-0.5 mb-2'>
-            <PriceTag price={item.price} offer={offer} accentColor={accentColor} />
-            {renderButtonArea()}
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  // List (الافتراضي): صورة مربعة صغيرة بجانب النص على اليسار.
   return (
-    <div
-      onClick={unavailable ? undefined : onSelect}
-      style={style}
-        className={cn(
-          'flex items-center gap-4 rounded-xl border bg-card p-3 text-start shadow-sm cursor-pointer transition-transform active:scale-[0.98]',
-          unavailable && 'opacity-60 grayscale pointer-events-none',
-          animClass
-        )}
+    <article
+      className={cn(
+        'menu-item-card',
+        `menu-item-card--${template.cardLayout}`,
+        `menu-item-card--${themeMode}`,
+        !isAvailable && 'is-unavailable',
+        template.animation !== 'none' && `menu-item-card--${template.animation}`
+      )}
+      style={cardStyle}
     >
-      <div className='relative shrink-0 overflow-hidden rounded-lg border border-muted/40'>
-        {offer && (
-          <span className='absolute top-0.5 right-0.5 z-10 rounded-full bg-red-600 px-1.5 py-0.5 text-[9px] font-bold text-white shadow'>
-            {offer.discount_kind === 'percentage'
-              ? `-${offer.discount_value}%`
-              : `-${offer.discount_value} د.ع`}
-          </span>
-        )}
-        {unavailable && <UnavailableBadge />}
-        {item.image_path ? (
-          <img src={item.image_path || 'رابط_صورة_افتراضية_أو_فارغ'} alt={name} className='h-24 w-24 object-cover object-center' />
-        ) : (
-          placeholder('sm')
-        )}
-      </div>
-      <div className='min-w-0 flex-1'>
-        <h3 className='truncate text-base font-semibold mb-1'>{name}</h3>
-        {desc && <p className='mt-0 line-clamp-2 text-xs text-muted-foreground mb-2'>{desc}</p>}
-        <div className='mt-1'>
-          <PriceTag price={item.price} offer={offer} accentColor={accentColor} />
-          {renderButtonArea()}
+      <button
+        type='button'
+        className='menu-item-card__details'
+        onClick={onSelect}
+        aria-label={`عرض تفاصيل ${name}`}
+      >
+        <div className='menu-item-card__media'>
+          {image ? (
+            <img src={image} alt={name} loading='lazy' />
+          ) : (
+            <span className='menu-item-card__placeholder' aria-hidden='true'>
+              <UtensilsCrossed className='size-6' />
+            </span>
+          )}
+          {offer && (
+            <span className='menu-item-card__offer'>{offerLabel(offer)}</span>
+          )}
+          {!isAvailable && (
+            <span className='menu-item-card__unavailable'>غير متوفر</span>
+          )}
         </div>
+        <div className='menu-item-card__copy'>
+          <h3>{name}</h3>
+          {description && <p>{description}</p>}
+          <div className='menu-item-card__prices'>
+            <strong>
+              {finalPrice.toLocaleString('ar-IQ')} <small>د.ع</small>
+            </strong>
+            {hasDiscount && <del>{item.price.toLocaleString('ar-IQ')} د.ع</del>}
+          </div>
+        </div>
+      </button>
+
+      <div className='menu-item-card__action'>
+        {quantity === 0 ? (
+          <button
+            type='button'
+            className='menu-item-card__add'
+            onClick={addToCart}
+            disabled={!isAvailable}
+          >
+            <Plus className='size-4' /> <span>أضف</span>
+          </button>
+        ) : (
+          <div
+            className='menu-item-card__quantity'
+            aria-label={`كمية ${name} في السلة`}
+          >
+            <button
+              type='button'
+              onClick={quantityDown}
+              aria-label={`إنقاص كمية ${name}`}
+            >
+              <Minus className='size-3.5' />
+            </button>
+            <span>{quantity}</span>
+            <button
+              type='button'
+              onClick={quantityUp}
+              aria-label={`زيادة كمية ${name}`}
+            >
+              <Plus className='size-3.5' />
+            </button>
+          </div>
+        )}
       </div>
-    </div>
+    </article>
   )
 }

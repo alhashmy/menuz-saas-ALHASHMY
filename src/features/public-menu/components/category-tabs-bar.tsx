@@ -1,13 +1,17 @@
 import { cn } from '@/lib/utils'
-import type { MenuTemplate } from '../templates/types'
+import { getMenuImageUrl } from '@/lib/supabase'
+import { UtensilsCrossed } from 'lucide-react'
 import type { PublicMenuCategory } from '../api'
+import type { MenuTemplate } from '../templates/types'
 
 interface CategoryTabsBarProps {
   categories: PublicMenuCategory[]
   activeId: string
   accentColor: string
   template: MenuTemplate
+  isLight: boolean
   onSelect: (id: string) => void
+  className?: string
 }
 
 export function CategoryTabsBar({
@@ -15,14 +19,55 @@ export function CategoryTabsBar({
   activeId,
   accentColor,
   template,
+  isLight,
   onSelect,
+  className,
 }: CategoryTabsBarProps) {
+  const containerClasses = cn(
+    'sticky top-0 z-40 border-b px-3 py-2 backdrop-blur-xl',
+    isLight
+      ? 'border-slate-900/8 bg-[#fffdf9]/90'
+      : 'border-white/10 bg-[#101112]/90',
+    className
+  )
+
+  const inactivePillClasses = isLight
+    ? 'bg-slate-100 text-slate-700 hover:bg-slate-200 border-transparent'
+    : 'bg-[#1f1f1f] text-slate-300 hover:bg-[#2a2a2a] border-transparent'
+
   return (
-    <div className='sticky top-0 z-40 border-b bg-slate-950/80 backdrop-blur-md'>
-      <div className='scrollbar-none flex gap-3 overflow-x-auto whitespace-nowrap px-4 py-4'>
+    <div className={containerClasses}>
+      <div className='mx-auto no-scrollbar flex max-w-5xl gap-2 overflow-x-auto px-1 py-1 whitespace-nowrap'>
         {categories.map((cat) => {
           const isActive = cat.id === activeId
           const label = cat.name_ar ?? cat.name
+
+          if (template.id === 'delivery') {
+            const cover = cat.items.find((item) => item.image_path)?.image_path
+            const image = cover
+              ? cover.startsWith('http://') || cover.startsWith('https://')
+                ? cover
+                : getMenuImageUrl(cover)
+              : null
+            return (
+              <button
+                key={cat.id}
+                type='button'
+                onClick={() => onSelect(cat.id)}
+                aria-current={isActive ? 'true' : undefined}
+                className={cn(
+                  'delivery-tabs__item',
+                  isActive && 'is-active'
+                )}
+                style={isActive ? { '--delivery-accent': accentColor } as React.CSSProperties : undefined}
+              >
+                <span className='delivery-tabs__image'>
+                  {image ? <img src={image} alt='' /> : <UtensilsCrossed className='size-4' />}
+                </span>
+                <span>{label}</span>
+              </button>
+            )
+          }
 
           if (template.tabStyle === 'underline') {
             return (
@@ -30,9 +75,11 @@ export function CategoryTabsBar({
                 key={cat.id}
                 type='button'
                 onClick={() => onSelect(cat.id)}
+                aria-current={isActive ? 'true' : undefined}
                 className={cn(
                   'shrink-0 border-b-2 px-1 pb-1 text-sm font-medium transition-colors',
-                  isActive ? 'border-current' : 'border-transparent text-muted-foreground'
+                  isLight ? 'text-slate-600' : 'text-slate-300',
+                  isActive ? 'border-current' : 'border-transparent'
                 )}
                 style={isActive ? { color: accentColor } : undefined}
               >
@@ -47,11 +94,22 @@ export function CategoryTabsBar({
                 key={cat.id}
                 type='button'
                 onClick={() => onSelect(cat.id)}
+                aria-current={isActive ? 'true' : undefined}
                 className={cn(
                   'shrink-0 rounded-md border px-3 py-1.5 text-sm font-medium transition-colors',
-                  isActive ? 'border-current' : 'border-border text-muted-foreground'
+                  isLight
+                    ? 'border-slate-200 bg-white text-slate-700'
+                    : 'border-white/20 bg-[#0d0d0d] text-white'
                 )}
-                style={isActive ? { color: accentColor, borderColor: accentColor } : undefined}
+                style={
+                  isActive
+                    ? {
+                        color: '#ffffff',
+                        borderColor: accentColor,
+                        backgroundColor: accentColor,
+                      }
+                    : undefined
+                }
               >
                 {label}
               </button>
@@ -64,9 +122,11 @@ export function CategoryTabsBar({
                 key={cat.id}
                 type='button'
                 onClick={() => onSelect(cat.id)}
+                aria-current={isActive ? 'true' : undefined}
                 className={cn(
-                  'shrink-0 px-2 py-1 text-sm font-medium uppercase tracking-wide transition-colors',
-                  isActive ? 'font-bold' : 'text-muted-foreground'
+                  'shrink-0 px-2 py-1 text-sm font-medium tracking-wide uppercase transition-colors',
+                  isLight ? 'text-slate-600' : 'text-slate-400',
+                  isActive ? 'font-bold' : ''
                 )}
                 style={isActive ? { color: accentColor } : undefined}
               >
@@ -81,13 +141,16 @@ export function CategoryTabsBar({
               key={cat.id}
               type='button'
               onClick={() => onSelect(cat.id)}
+              aria-current={isActive ? 'true' : undefined}
               className={cn(
                 'shrink-0 rounded-full border px-4 py-1.5 text-sm font-medium transition-colors',
-                isActive
-                  ? 'border-transparent text-white'
-                  : 'border-border bg-muted/50 text-muted-foreground'
+                isActive ? 'shadow-md' : inactivePillClasses
               )}
-              style={isActive ? { backgroundColor: accentColor } : undefined}
+              style={
+                isActive
+                  ? { backgroundColor: accentColor, color: '#ffffff' }
+                  : undefined
+              }
             >
               {label}
             </button>

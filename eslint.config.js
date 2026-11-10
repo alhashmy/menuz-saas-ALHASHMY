@@ -7,7 +7,8 @@ import { defineConfig } from 'eslint/config'
 import tseslint from 'typescript-eslint'
 
 export default defineConfig(
-  { ignores: ['dist', 'src/components/ui'] },
+  // Kilo worktrees are tool-managed sibling repositories, not application source.
+  { ignores: ['dist', '.kilo/**', 'src/components/ui'] },
   {
     extends: [
       js.configs.recommended,

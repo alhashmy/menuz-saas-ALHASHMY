@@ -12,13 +12,16 @@ import {
   CommandList,
   CommandSeparator,
 } from '@/components/ui/command'
-import { sidebarData } from './layout/data/sidebar-data'
+import { createSidebarData } from './layout/data/sidebar-data'
 import { ScrollArea } from './ui/scroll-area'
+import { useLanguage } from '@/i18n'
 
 export function CommandMenu() {
   const navigate = useNavigate()
   const { setTheme } = useTheme()
   const { open, setOpen } = useSearch()
+  const { language, t } = useLanguage()
+  const sidebarData = createSidebarData(t)
 
   const runCommand = React.useCallback(
     (command: () => unknown) => {
@@ -30,10 +33,14 @@ export function CommandMenu() {
 
   return (
     <CommandDialog modal open={open} onOpenChange={setOpen}>
-      <CommandInput placeholder='Type a command or search...' />
+      <CommandInput
+        placeholder={
+          language === 'ar' ? 'ابحث عن صفحة أو إجراء…' : 'Search pages and actions…'
+        }
+      />
       <CommandList>
         <ScrollArea type='hover' className='h-72 pe-1'>
-          <CommandEmpty>No results found.</CommandEmpty>
+          <CommandEmpty>{language === 'ar' ? 'لا توجد نتائج.' : 'No results found.'}</CommandEmpty>
           {sidebarData.navGroups.map((group) => (
             <CommandGroup key={group.title} heading={group.title}>
               {group.items.map((navItem, i) => {
@@ -71,17 +78,17 @@ export function CommandMenu() {
             </CommandGroup>
           ))}
           <CommandSeparator />
-          <CommandGroup heading='Theme'>
+          <CommandGroup heading={language === 'ar' ? 'المظهر' : 'Theme'}>
             <CommandItem onSelect={() => runCommand(() => setTheme('light'))}>
-              <Sun /> <span>Light</span>
+              <Sun /> <span>{language === 'ar' ? 'فاتح' : 'Light'}</span>
             </CommandItem>
             <CommandItem onSelect={() => runCommand(() => setTheme('dark'))}>
               <Moon className='scale-90' />
-              <span>Dark</span>
+              <span>{language === 'ar' ? 'داكن' : 'Dark'}</span>
             </CommandItem>
             <CommandItem onSelect={() => runCommand(() => setTheme('system'))}>
               <Laptop />
-              <span>System</span>
+              <span>{language === 'ar' ? 'حسب النظام' : 'System'}</span>
             </CommandItem>
           </CommandGroup>
         </ScrollArea>
