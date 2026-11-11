@@ -55,7 +55,6 @@ export function createSidebarData(t: Translate): SidebarData {
             title: t('nav.settings'),
             icon: Settings,
             items: [
-              { title: t('nav.account'), url: '/settings/account' },
               {
                 title: t('nav.orderSettings'),
                 url: '/settings/restaurant-ordering',

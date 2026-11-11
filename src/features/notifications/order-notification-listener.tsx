@@ -20,7 +20,6 @@ export function OrderNotificationListener() {
   const restaurantId = useAuthStore((state) => state.restaurant?.id)
   const queryClient = useQueryClient()
   const soundEnabled = useNotificationStore((state) => state.soundEnabled)
-  const audioUnlocked = useNotificationStore((state) => state.audioUnlocked)
   const notificationSoundUrl = useNotificationStore(
     (state) => state.notificationSoundUrl
   )
@@ -37,7 +36,15 @@ export function OrderNotificationListener() {
       .eq('id', restaurantId)
       .maybeSingle()
       .then(({ data, error }) => {
-        if (!active || error) return
+        if (!active) return
+        if (error) {
+          console.error('[Realtime] Failed to fetch notification sound URL', {
+            restaurantId,
+            error: error.message,
+            timestamp: new Date().toISOString(),
+          })
+          return
+        }
         setNotificationSoundUrl(data?.notification_sound_url ?? null)
       })
     return () => {
@@ -49,20 +56,16 @@ export function OrderNotificationListener() {
     preloadNotificationAudio(notificationSoundUrl)
     if (!soundEnabled) return
     const unlockAudio = () => {
-      void unlockNotificationAudio(notificationSoundUrl)
-        .then(() => {
-          useNotificationStore.getState().setAudioUnlocked(true)
-        })
-        .catch((error: unknown) => console.error('Could not unlock notification audio:', error))
+      void unlockNotificationAudio(notificationSoundUrl).then(() => {
+        useNotificationStore.getState().setAudioUnlocked(true)
+      })
     }
 
-    // بعد التحديث لا يمكن للمتصفح ضمان تشغيل الصوت قبل أول لمسة، لذلك
-    // نعيد تجهيزه بصمت فور أول تفاعل في أي مكان من التطبيق.
-    unlockAudio()
-    window.addEventListener('pointerdown', unlockAudio, { once: true })
+    // Attach one-time global listeners for first user gesture to unlock audio
+    window.addEventListener('click', unlockAudio, { once: true })
     window.addEventListener('keydown', unlockAudio, { once: true })
     return () => {
-      window.removeEventListener('pointerdown', unlockAudio)
+      window.removeEventListener('click', unlockAudio)
       window.removeEventListener('keydown', unlockAudio)
     }
   }, [notificationSoundUrl, soundEnabled])
@@ -92,13 +95,10 @@ export function OrderNotificationListener() {
               : '—'
 
           if (soundEnabled) {
-            // Kept directly in the INSERT callback: no delayed state transition can
-            // swallow playback after a new order arrives.
-            void playNotificationAudio(notificationSoundUrl)
-              .then(() => {
-              if (!audioUnlocked) useNotificationStore.getState().setAudioUnlocked(true)
-              })
-              .catch((error: unknown) => console.error('Could not play notification audio:', error))
+            // Play directly in INSERT callback; catch prevents app crash if autoplay blocked
+            void playNotificationAudio(notificationSoundUrl).catch((error: unknown) => {
+              console.warn('Audio playback prevented (autoplay policy):', error)
+            })
           }
           if (
             'Notification' in window &&
@@ -127,14 +127,19 @@ export function OrderNotificationListener() {
       .subscribe((status, error) => {
         if (status === 'SUBSCRIBED') {
           console.info('[Realtime] orders listener subscribed', { restaurantId })
+          toast.dismiss() // Dismiss any pending error toast on successful subscription
           return
         }
+        // Only treat CHANNEL_ERROR and TIMED_OUT as real errors
+        // CLOSED is expected during cleanup/unmount and should not show error toast
         if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
           console.error('[Realtime] orders listener failed', {
             restaurantId,
             status,
-            error,
+            error: error?.message ?? error,
             supabaseUrl: import.meta.env.VITE_SUPABASE_URL,
+            hasAnonKey: !!import.meta.env.VITE_SUPABASE_ANON_KEY,
+            timestamp: new Date().toISOString(),
           })
           toast.error('تعذر ربط التنبيهات الفورية. أعد تحميل الصفحة أو راجع إعدادات الإنتاج.')
         }
@@ -142,7 +147,7 @@ export function OrderNotificationListener() {
     return () => {
       void supabase.removeChannel(channel)
     }
-  }, [audioUnlocked, notificationSoundUrl, queryClient, restaurantId, soundEnabled])
+  }, [notificationSoundUrl, queryClient, restaurantId, soundEnabled])
 
   return null
 }

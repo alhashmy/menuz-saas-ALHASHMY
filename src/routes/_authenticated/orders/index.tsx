@@ -22,7 +22,7 @@ import {
   useOrders,
 } from '@/features/orders/api'
 import { OrderDetailsSheet } from '@/features/orders/components/OrderDetailsSheet'
-import { OrderArchive } from '@/features/orders/components/OrderArchive'
+import { ArchiveHistoryDialog } from '@/features/orders/components/ArchiveHistoryDialog'
 import type { Order, OrderStatus } from '@/features/orders/types'
 
 const statusMeta: Record<OrderStatus, { label: string; className: string }> = {
@@ -127,7 +127,7 @@ export function OrdersPage() {
   const [detailsOrder, setDetailsOrder] = useState<Order | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<Order | null>(null)
   const [archiveConfirmOpen, setArchiveConfirmOpen] = useState(false)
-  const [showArchive, setShowArchive] = useState(false)
+  const [archiveHistoryOpen, setArchiveHistoryOpen] = useState(false)
   const visibleOrders = useMemo(
     () =>
       filter === 'all'
@@ -166,7 +166,7 @@ export function OrdersPage() {
     })
   }
 
-  return (
+return (
     <div className='space-y-6' dir='rtl'>
       <header className='flex flex-wrap items-start justify-between gap-4'>
         <div>
@@ -182,20 +182,20 @@ export function OrdersPage() {
           <Button variant='outline' size='sm' onClick={refresh}>
             <RefreshCw className='size-4' /> تحديث
           </Button>
-          <Button variant={showArchive ? 'secondary' : 'outline'} size='sm' onClick={() => setShowArchive((visible) => !visible)}>
+          <Button variant='outline' size='sm' onClick={() => setArchiveHistoryOpen(true)}>
             <History className='size-4' /> سجل الأرشيف
           </Button>
           <Button
             variant='outline'
             size='sm'
             onClick={() => setArchiveConfirmOpen(true)}
-            disabled={!orders.some((order) => order.status === 'completed' || order.status === 'cancelled')}
+            disabled={isLoading ? false : !orders.some((order) => order.status === 'completed' || order.status === 'cancelled')}
           >
             <Archive className='size-4' /> أرشفة الطلبات المنتهية
           </Button>
         </div>
       </header>
-      {showArchive ? <OrderArchive restaurantId={restaurantId} /> : <><Tabs
+      <Tabs
         value={filter}
         onValueChange={(value) => setFilter(value as 'all' | OrderStatus)}
       >
@@ -230,7 +230,7 @@ export function OrdersPage() {
             />
           ))}
         </section>
-      )}</>}
+      )}
       {detailsOrder && (
         <OrderDetailsSheet
           open
@@ -259,6 +259,11 @@ export function OrdersPage() {
         cancelBtnText='إلغاء'
         isLoading={archiveResolved.isPending}
         handleConfirm={handleArchiveResolved}
+      />
+      <ArchiveHistoryDialog
+        restaurantId={restaurantId}
+        open={archiveHistoryOpen}
+        onOpenChange={setArchiveHistoryOpen}
       />
     </div>
   )

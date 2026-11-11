@@ -39,7 +39,6 @@ import { Route as AuthenticatedAnalyticsIndexRouteImport } from './routes/_authe
 import { Route as AuthenticatedSettingsRestaurantOrderingRouteImport } from './routes/_authenticated/settings/restaurant-ordering'
 import { Route as AuthenticatedSettingsDisplayRouteImport } from './routes/_authenticated/settings/display'
 import { Route as AuthenticatedSettingsAppearanceRouteImport } from './routes/_authenticated/settings/appearance'
-import { Route as AuthenticatedSettingsAccountRouteImport } from './routes/_authenticated/settings/account'
 import { Route as AuthenticatedErrorsErrorRouteImport } from './routes/_authenticated/errors/$error'
 
 const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
@@ -205,12 +204,6 @@ const AuthenticatedSettingsAppearanceRoute =
     path: '/appearance',
     getParentRoute: () => AuthenticatedSettingsRouteRoute,
   } as any)
-const AuthenticatedSettingsAccountRoute =
-  AuthenticatedSettingsAccountRouteImport.update({
-    id: '/account',
-    path: '/account',
-    getParentRoute: () => AuthenticatedSettingsRouteRoute,
-  } as any)
 const AuthenticatedErrorsErrorRoute =
   AuthenticatedErrorsErrorRouteImport.update({
     id: '/errors/$error',
@@ -233,7 +226,6 @@ export interface FileRoutesByFullPath {
   '/503': typeof errors503Route
   '/menu/$restaurantSlug': typeof MenuRestaurantSlugRoute
   '/errors/$error': typeof AuthenticatedErrorsErrorRoute
-  '/settings/account': typeof AuthenticatedSettingsAccountRoute
   '/settings/appearance': typeof AuthenticatedSettingsAppearanceRoute
   '/settings/display': typeof AuthenticatedSettingsDisplayRoute
   '/settings/restaurant-ordering': typeof AuthenticatedSettingsRestaurantOrderingRoute
@@ -265,7 +257,6 @@ export interface FileRoutesByTo {
   '/503': typeof errors503Route
   '/menu/$restaurantSlug': typeof MenuRestaurantSlugRoute
   '/errors/$error': typeof AuthenticatedErrorsErrorRoute
-  '/settings/account': typeof AuthenticatedSettingsAccountRoute
   '/settings/appearance': typeof AuthenticatedSettingsAppearanceRoute
   '/settings/display': typeof AuthenticatedSettingsDisplayRoute
   '/settings/restaurant-ordering': typeof AuthenticatedSettingsRestaurantOrderingRoute
@@ -300,7 +291,6 @@ export interface FileRoutesById {
   '/(errors)/503': typeof errors503Route
   '/menu/$restaurantSlug': typeof MenuRestaurantSlugRoute
   '/_authenticated/errors/$error': typeof AuthenticatedErrorsErrorRoute
-  '/_authenticated/settings/account': typeof AuthenticatedSettingsAccountRoute
   '/_authenticated/settings/appearance': typeof AuthenticatedSettingsAppearanceRoute
   '/_authenticated/settings/display': typeof AuthenticatedSettingsDisplayRoute
   '/_authenticated/settings/restaurant-ordering': typeof AuthenticatedSettingsRestaurantOrderingRoute
@@ -335,7 +325,6 @@ export interface FileRouteTypes {
     | '/503'
     | '/menu/$restaurantSlug'
     | '/errors/$error'
-    | '/settings/account'
     | '/settings/appearance'
     | '/settings/display'
     | '/settings/restaurant-ordering'
@@ -367,7 +356,6 @@ export interface FileRouteTypes {
     | '/503'
     | '/menu/$restaurantSlug'
     | '/errors/$error'
-    | '/settings/account'
     | '/settings/appearance'
     | '/settings/display'
     | '/settings/restaurant-ordering'
@@ -401,7 +389,6 @@ export interface FileRouteTypes {
     | '/(errors)/503'
     | '/menu/$restaurantSlug'
     | '/_authenticated/errors/$error'
-    | '/_authenticated/settings/account'
     | '/_authenticated/settings/appearance'
     | '/_authenticated/settings/display'
     | '/_authenticated/settings/restaurant-ordering'
@@ -648,13 +635,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSettingsAppearanceRouteImport
       parentRoute: typeof AuthenticatedSettingsRouteRoute
     }
-    '/_authenticated/settings/account': {
-      id: '/_authenticated/settings/account'
-      path: '/account'
-      fullPath: '/settings/account'
-      preLoaderRoute: typeof AuthenticatedSettingsAccountRouteImport
-      parentRoute: typeof AuthenticatedSettingsRouteRoute
-    }
     '/_authenticated/errors/$error': {
       id: '/_authenticated/errors/$error'
       path: '/errors/$error'
@@ -666,7 +646,6 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedSettingsRouteRouteChildren {
-  AuthenticatedSettingsAccountRoute: typeof AuthenticatedSettingsAccountRoute
   AuthenticatedSettingsAppearanceRoute: typeof AuthenticatedSettingsAppearanceRoute
   AuthenticatedSettingsDisplayRoute: typeof AuthenticatedSettingsDisplayRoute
   AuthenticatedSettingsRestaurantOrderingRoute: typeof AuthenticatedSettingsRestaurantOrderingRoute
@@ -675,7 +654,6 @@ interface AuthenticatedSettingsRouteRouteChildren {
 
 const AuthenticatedSettingsRouteRouteChildren: AuthenticatedSettingsRouteRouteChildren =
   {
-    AuthenticatedSettingsAccountRoute: AuthenticatedSettingsAccountRoute,
     AuthenticatedSettingsAppearanceRoute: AuthenticatedSettingsAppearanceRoute,
     AuthenticatedSettingsDisplayRoute: AuthenticatedSettingsDisplayRoute,
     AuthenticatedSettingsRestaurantOrderingRoute:
