@@ -8,7 +8,6 @@ import {
   Layout,
   LayoutDashboard,
   LayoutGrid,
-  QrCode,
   Settings,
   Users,
   UtensilsCrossed,
@@ -47,7 +46,6 @@ export function createSidebarData(t: Translate): SidebarData {
           { title: t('nav.staff'), url: '/staff', icon: Users },
           { title: t('nav.analytics'), url: '/analytics', icon: BarChart3 },
           { title: t('nav.apps'), url: '/apps', icon: Grid },
-          { title: t('qr.title'), url: '/qr-codes', icon: QrCode },
         ],
       },
       {

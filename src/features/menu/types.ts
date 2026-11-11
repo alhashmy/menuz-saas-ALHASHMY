@@ -18,5 +18,6 @@ export interface MenuItem {
   price: number
   image_path: string | null
   is_available: boolean
+  is_bestseller: boolean
   sort_order: number
 }

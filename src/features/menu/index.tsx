@@ -1,5 +1,5 @@
 import { useCallback, useState, type ReactNode } from 'react'
-import { Loader2, Pencil, Plus, Trash2, Edit, Settings, GripVertical } from 'lucide-react'
+import { Loader2, Pencil, Plus, Trash2, Edit, Settings, GripVertical, Flame } from 'lucide-react'
 import { toast } from 'sonner'
 import { getMenuImageUrl, supabase, uploadMenuImage } from '@/lib/supabase'
 import { cropMenuItemImage } from '@/lib/image-crop'
@@ -33,6 +33,7 @@ import {
   useMenuCategories,
   useMenuItems,
   useToggleItemAvailability,
+  useToggleItemBestseller,
   useUpdateSortOrder,
   useUpdateCategorySortOrder,
   useUpsertMenuItem,
@@ -60,6 +61,7 @@ function SortableItem({
   item,
   index,
   toggleAvailability,
+  toggleBestseller,
   setItemToEdit,
   setDeleteTarget,
   isEditModeEnabled,
@@ -68,6 +70,7 @@ function SortableItem({
   item: MenuItem
   index: number
   toggleAvailability: ReturnType<typeof useToggleItemAvailability>
+  toggleBestseller: ReturnType<typeof useToggleItemBestseller>
   setItemToEdit: (item: MenuItem | null) => void
   setDeleteTarget: (target: { type: 'category' | 'item'; id: string; name: string; image_path?: string | null } | null) => void
   isEditModeEnabled: boolean
@@ -130,6 +133,7 @@ function SortableItem({
                 })
               }}
             />
+            <button type='button' className={cn('rounded-md p-1.5', item.is_bestseller ? 'bg-orange-100 text-orange-700' : 'text-muted-foreground hover:bg-muted')} onClick={(event) => { event.preventDefault(); event.stopPropagation(); toggleBestseller.mutate({ id: item.id, is_bestseller: !item.is_bestseller }) }} title='الأعلى مبيعاً' aria-label='تبديل الأعلى مبيعاً'><Flame className='size-4' /></button>
             <span
               className={cn(
                 'text-xs font-medium px-2 py-0.5 rounded',
@@ -178,6 +182,7 @@ function CategoryItems({
   sensors,
   updateSortOrder,
   toggleAvailability,
+  toggleBestseller,
   setItemToEdit,
   setDeleteTarget,
   isEditModeEnabled,
@@ -188,6 +193,7 @@ function CategoryItems({
   sensors: ReturnType<typeof useSensors>
   updateSortOrder: ReturnType<typeof useUpdateSortOrder>
   toggleAvailability: ReturnType<typeof useToggleItemAvailability>
+  toggleBestseller: ReturnType<typeof useToggleItemBestseller>
   setItemToEdit: (item: MenuItem | null) => void
   setDeleteTarget: (target: { type: 'category' | 'item'; id: string; name: string; image_path?: string | null } | null) => void
   isEditModeEnabled: boolean
@@ -232,6 +238,7 @@ function CategoryItems({
               item={item}
               index={index}
               toggleAvailability={toggleAvailability}
+              toggleBestseller={toggleBestseller}
               setItemToEdit={setItemToEdit}
               setDeleteTarget={setDeleteTarget}
               isEditModeEnabled={isEditModeEnabled}
@@ -249,6 +256,7 @@ function CategoryItems({
           item={item}
           index={index}
           toggleAvailability={toggleAvailability}
+          toggleBestseller={toggleBestseller}
           setItemToEdit={setItemToEdit}
           setDeleteTarget={setDeleteTarget}
           isEditModeEnabled={isEditModeEnabled}
@@ -415,6 +423,7 @@ export function MenuManagement() {
     useMenuCategories()
   const { data: allItems = [], isLoading: loadingItems } = useMenuItems()
   const toggleAvailability = useToggleItemAvailability()
+  const toggleBestseller = useToggleItemBestseller()
   const deleteCategory = useDeleteCategory()
   const deleteItem = useDeleteMenuItem()
   const updateSortOrder = useUpdateSortOrder()
@@ -602,6 +611,7 @@ export function MenuManagement() {
                     sensors={sensors}
                     updateSortOrder={updateSortOrder}
                     toggleAvailability={toggleAvailability}
+                    toggleBestseller={toggleBestseller}
                     setItemToEdit={setItemToEdit}
                     setDeleteTarget={setDeleteTarget}
                     isEditModeEnabled={isEditModeEnabled}

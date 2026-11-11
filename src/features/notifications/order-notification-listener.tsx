@@ -1,10 +1,14 @@
-import { useEffect, useRef } from 'react'
+import { useEffect } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { useAuthStore } from '@/stores/auth-store'
 import { useNotificationStore } from '@/stores/notification-store'
 import { supabase } from '@/lib/supabase'
-import { getNotificationSoundUrl } from './sound'
+import {
+  playNotificationAudio,
+  preloadNotificationAudio,
+  unlockNotificationAudio,
+} from './notification-audio'
 
 type NewOrderPayload = {
   restaurant_id?: unknown
@@ -23,7 +27,6 @@ export function OrderNotificationListener() {
   const setNotificationSoundUrl = useNotificationStore(
     (state) => state.setNotificationSoundUrl
   )
-  const audioRef = useRef<HTMLAudioElement | null>(null)
 
   useEffect(() => {
     if (!restaurantId) return
@@ -43,39 +46,22 @@ export function OrderNotificationListener() {
   }, [restaurantId, setNotificationSoundUrl])
 
   useEffect(() => {
-    audioRef.current = new Audio(getNotificationSoundUrl(notificationSoundUrl))
-    audioRef.current.preload = 'auto'
-    return () => {
-      audioRef.current?.pause()
-      audioRef.current = null
-    }
-  }, [notificationSoundUrl])
-
-  useEffect(() => {
+    preloadNotificationAudio(notificationSoundUrl)
     if (!soundEnabled) return
-    let active = true
     const unlockAudio = () => {
-      const audio = audioRef.current
-      if (!audio) return
-      audio.volume = 0
-      void audio
-        .play()
+      void unlockNotificationAudio(notificationSoundUrl)
         .then(() => {
-          if (!active) return
-          audio.pause()
-          audio.currentTime = 0
-          audio.volume = 1
           useNotificationStore.getState().setAudioUnlocked(true)
         })
-        .catch(() => undefined)
+        .catch((error: unknown) => console.error('Could not unlock notification audio:', error))
     }
 
-    // A direct muted attempt succeeds in browsers that permit restored media playback.
+    // بعد التحديث لا يمكن للمتصفح ضمان تشغيل الصوت قبل أول لمسة، لذلك
+    // نعيد تجهيزه بصمت فور أول تفاعل في أي مكان من التطبيق.
     unlockAudio()
     window.addEventListener('pointerdown', unlockAudio, { once: true })
     window.addEventListener('keydown', unlockAudio, { once: true })
     return () => {
-      active = false
       window.removeEventListener('pointerdown', unlockAudio)
       window.removeEventListener('keydown', unlockAudio)
     }
@@ -105,9 +91,14 @@ export function OrderNotificationListener() {
               ? order.daily_sequence
               : '—'
 
-          if (soundEnabled && audioUnlocked && audioRef.current) {
-            audioRef.current.currentTime = 0
-            void audioRef.current.play().catch(() => undefined)
+          if (soundEnabled) {
+            // Kept directly in the INSERT callback: no delayed state transition can
+            // swallow playback after a new order arrives.
+            void playNotificationAudio(notificationSoundUrl)
+              .then(() => {
+              if (!audioUnlocked) useNotificationStore.getState().setAudioUnlocked(true)
+              })
+              .catch((error: unknown) => console.error('Could not play notification audio:', error))
           }
           if (
             'Notification' in window &&
@@ -137,7 +128,7 @@ export function OrderNotificationListener() {
     return () => {
       void supabase.removeChannel(channel)
     }
-  }, [audioUnlocked, queryClient, restaurantId, soundEnabled])
+  }, [audioUnlocked, notificationSoundUrl, queryClient, restaurantId, soundEnabled])
 
   return null
 }

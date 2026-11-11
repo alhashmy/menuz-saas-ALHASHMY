@@ -2,10 +2,6 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import {
   Loader2,
   MapPin,
-  MessageCircle,
-  Music2,
-  AtSign,
-  Share2,
   Search,
   ShoppingBag,
   Sparkles,
@@ -48,6 +44,18 @@ function menuImageUrl(path: string | null | undefined) {
   return path.startsWith('https://') || path.startsWith('http://')
     ? path
     : getMenuImageUrl(path)
+}
+
+function SocialIcon({ name }: { name: 'whatsapp' | 'instagram' | 'facebook' | 'tiktok' | 'maps' | 'website' }) {
+  const paths: Record<typeof name, string> = {
+    whatsapp: 'M16.75 13.96c-.25-.13-1.47-.73-1.7-.81-.23-.08-.4-.13-.57.13s-.65.81-.79.98c-.15.18-.29.2-.54.07a6.96 6.96 0 0 1-2.05-1.26 7.7 7.7 0 0 1-1.42-1.77c-.15-.25-.02-.38.11-.5.12-.12.25-.29.37-.43.12-.15.16-.25.25-.42.08-.17.04-.32-.02-.44-.06-.13-.57-1.37-.78-1.87-.21-.5-.42-.43-.57-.44h-.49c-.17 0-.44.06-.67.32-.23.25-.88.86-.88 2.1s.9 2.44 1.03 2.61c.13.17 1.77 2.7 4.28 3.78.6.26 1.07.41 1.43.53.6.19 1.15.16 1.58.1.48-.07 1.47-.6 1.68-1.18.21-.58.21-1.08.15-1.18-.06-.11-.23-.17-.48-.29M12 21a8.9 8.9 0 0 1-4.54-1.24L3 21l1.27-4.34A8.9 8.9 0 1 1 12 21m0-16.36a7.43 7.43 0 0 0-6.35 11.28l.18.29-.75 2.58 2.67-.7.28.17A7.43 7.43 0 1 0 12 4.64',
+    instagram: 'M7 2h10a5 5 0 0 1 5 5v10a5 5 0 0 1-5 5H7a5 5 0 0 1-5-5V7a5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3v10a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3V7a3 3 0 0 0-3-3H7m5 3.5A4.5 4.5 0 1 1 7.5 12 4.5 4.5 0 0 1 12 7.5m0 2A2.5 2.5 0 1 0 14.5 12 2.5 2.5 0 0 0 12 9.5M17.75 6a1.25 1.25 0 1 1-1.25 1.25A1.25 1.25 0 0 1 17.75 6',
+    facebook: 'M14 8h3V4h-3c-2.76 0-5 2.24-5 5v3H6v4h3v6h4v-6h3l1-4h-4V9c0-.55.45-1 1-1',
+    tiktok: 'M14 3c.3 2.3 1.6 3.7 4 3.9v3.1c-1.5.1-2.8-.4-4-1.1v6.4c0 4.2-4.5 5.5-7.2 3.1-1.7-1.6-1.7-4.5.1-6.1.6-.6 1.5-1 2.5-1v3.2c-.7-.2-1.4.2-1.6.8-.2.7.2 1.4.8 1.6 1 .3 1.8-.5 1.8-1.4V3h3.6z',
+    maps: 'M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7m0 9.5A2.5 2.5 0 1 1 14.5 9 2.5 2.5 0 0 1 12 11.5',
+    website: 'M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2m6.9 6h-3.1a15.7 15.7 0 0 0-1.1-3.1A8.1 8.1 0 0 1 18.9 8M12 4c.8 1.1 1.5 2.5 1.8 4h-3.6c.3-1.5 1-2.9 1.8-4M4.3 14A8.4 8.4 0 0 1 4 12c0-.7.1-1.4.3-2h3.5a16.6 16.6 0 0 0 0 4H4.3m.8 2h3.1c.3 1.1.7 2.2 1.3 3.1A8.1 8.1 0 0 1 5.1 16m3.1-8H5.1a8.1 8.1 0 0 1 4.2-3.1A15.7 15.7 0 0 0 8.2 8M12 20c-.8-1.1-1.5-2.5-1.8-4h3.6c-.3 1.5-1 2.9-1.8 4m2.2-6h-4.4a14.5 14.5 0 0 1 0-4h4.4a14.5 14.5 0 0 1 0 4m.3 5.1c.6-.9 1-2 1.3-3.1h3.1a8.1 8.1 0 0 1-4.4 3.1M16.2 14a16.6 16.6 0 0 0 0-4h3.5c.2.6.3 1.3.3 2s-.1 1.4-.3 2h-3.5',
+  }
+  return <svg viewBox='0 0 24 24' aria-hidden='true' fill='currentColor'><path d={paths[name]} /></svg>
 }
 
 export function PublicMenu({ restaurantSlug }: PublicMenuProps) {
@@ -218,6 +226,13 @@ export function PublicMenu({ restaurantSlug }: PublicMenuProps) {
   const mapUrl =
     isSafeHttpUrl(restaurant.google_maps_url) ??
     isSafeHttpUrl(restaurant.waze_url)
+  // روابط الإعدادات هي المصدر الأساسي، وتبقى روابط صانع المنيو المحفوظة
+  // متاحة للقوائم القديمة حتى لا تختفي روابطها عند الترقية.
+  const whatsappUrl = restaurant.whatsapp_number ?? builderStyle?.socialLinks?.whatsapp ?? null
+  const instagramUrl = isSafeHttpUrl(restaurant.instagram_url ?? builderStyle?.socialLinks?.instagram)
+  const facebookUrl = isSafeHttpUrl(restaurant.facebook_url ?? builderStyle?.socialLinks?.facebook)
+  const tiktokUrl = isSafeHttpUrl(restaurant.tiktok_url ?? builderStyle?.socialLinks?.tiktok)
+  const websiteUrl = isSafeHttpUrl(restaurant.website_url)
   const menuStyle = {
     '--menu-accent': accentColor,
     '--menu-primary': template.previewPrimary,
@@ -245,58 +260,56 @@ export function PublicMenu({ restaurantSlug }: PublicMenuProps) {
           rel='noopener noreferrer'
           aria-label='موقع المطعم'
         >
-          <MapPin />
+          <SocialIcon name='maps' />
         </a>
       )}
-      {builderStyle?.socialVisibility?.whatsapp &&
-        builderStyle.socialLinks?.whatsapp && (
+      {whatsappUrl && (
           <a
             href={
-              builderStyle.socialLinks.whatsapp.startsWith('http')
-                ? builderStyle.socialLinks.whatsapp
-                : 'https://wa.me/' +
-                  builderStyle.socialLinks.whatsapp.replace(/\D/g, '')
+              whatsappUrl.startsWith('http') ? whatsappUrl : 'https://wa.me/' + whatsappUrl.replace(/\D/g, '')
             }
             target='_blank'
             rel='noopener noreferrer'
             aria-label='واتساب'
           >
-            <MessageCircle />
+            <SocialIcon name='whatsapp' />
           </a>
         )}
-      {builderStyle?.socialVisibility?.instagram &&
-        builderStyle.socialLinks?.instagram && (
+      {instagramUrl && (
           <a
-            href={builderStyle.socialLinks.instagram}
+            href={instagramUrl}
             target='_blank'
             rel='noopener noreferrer'
             aria-label='إنستغرام'
           >
-            <AtSign />
+            <SocialIcon name='instagram' />
           </a>
         )}
-      {builderStyle?.socialVisibility?.facebook &&
-        builderStyle.socialLinks?.facebook && (
+      {facebookUrl && (
           <a
-            href={builderStyle.socialLinks.facebook}
+            href={facebookUrl}
             target='_blank'
             rel='noopener noreferrer'
             aria-label='فيسبوك'
           >
-            <Share2 />
+            <SocialIcon name='facebook' />
           </a>
         )}
-      {builderStyle?.socialVisibility?.tiktok &&
-        builderStyle.socialLinks?.tiktok && (
+      {tiktokUrl && (
           <a
-            href={builderStyle.socialLinks.tiktok}
+            href={tiktokUrl}
             target='_blank'
             rel='noopener noreferrer'
             aria-label='تيك توك'
           >
-            <Music2 />
+            <SocialIcon name='tiktok' />
           </a>
         )}
+      {websiteUrl && (
+        <a href={websiteUrl} target='_blank' rel='noopener noreferrer' aria-label='الموقع الإلكتروني'>
+          <SocialIcon name='website' />
+        </a>
+      )}
     </aside>
   )
 

@@ -11,6 +11,7 @@ export interface PublicMenuItem {
   price: number
   image_path: string | null
   is_available: boolean
+  is_bestseller: boolean
 }
 
 export interface PublicMenuCategory {
@@ -30,6 +31,11 @@ export interface PublicRestaurant {
   is_open: boolean
   google_maps_url: string | null
   waze_url: string | null
+  whatsapp_number: string | null
+  website_url: string | null
+  instagram_url: string | null
+  facebook_url: string | null
+  tiktok_url: string | null
 }
 
 export interface OperatingHours {
@@ -208,7 +214,7 @@ export function usePublicMenu(restaurantSlug: string) {
       const { data: restaurant, error: restaurantError } = await supabase
         .from('restaurants')
         .select(
-          'id, slug, name, name_ar, description, is_open, google_maps_url, waze_url'
+          'id, slug, name, name_ar, description, is_open, google_maps_url, waze_url, whatsapp_number, website_url, instagram_url, facebook_url, tiktok_url'
         )
         .eq('slug', restaurantSlug)
         .eq('is_active', true)
@@ -234,7 +240,7 @@ export function usePublicMenu(restaurantSlug: string) {
         supabase
           .from('menu_categories')
           .select(
-            'id, name, name_ar, sort_order, menu_items(id, category_id, name, name_ar, description, description_ar, price, image_path, is_available, sort_order)'
+            'id, name, name_ar, sort_order, menu_items(id, category_id, name, name_ar, description, description_ar, price, image_path, is_available, is_bestseller, sort_order)'
           )
           .eq('restaurant_id', restaurant.id)
           .eq('is_active', true)
@@ -302,7 +308,7 @@ export function usePublicMenu(restaurantSlug: string) {
               is_available: boolean
               sort_order: number
             })[]
-          ).sort((a, b) => a.sort_order - b.sort_order),
+          ).sort((a, b) => Number(b.is_bestseller) - Number(a.is_bestseller) || a.sort_order - b.sort_order),
         })
       )
 

@@ -1,11 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { ComingSoonPage } from '@/features/coming-soon'
+import { StaffManagementPage } from '@/features/staff'
 
 export const Route = createFileRoute('/_authenticated/staff/')({
-  component: () => (
-    <ComingSoonPage
-      title='الموظفون'
-      description='دعوة الموظفين وإدارة الأدوار والصلاحيات قريباً.'
-    />
-  ),
+  component: StaffManagementPage,
 })

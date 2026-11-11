@@ -65,16 +65,19 @@ export function useOrders(restaurantId: string | null) {
   })
 }
 
-export function useArchiveTodayOrders() {
+export function useArchiveResolvedOrders() {
   const queryClient = useQueryClient()
   const restaurantId = useAuthStore((s) => s.restaurant?.id)
 
   return useMutation({
     mutationFn: async () => {
       if (!restaurantId) throw new Error('لا يوجد مطعم مرتبط بالحساب الحالي.')
-      const { error } = await supabase.rpc('archive_todays_orders', {
-        p_restaurant_id: restaurantId,
-      })
+      const { error } = await supabase
+        .from('orders')
+        .update({ is_archived: true })
+        .eq('restaurant_id', restaurantId)
+        .eq('is_archived', false)
+        .in('status', ['completed', 'cancelled'])
       if (error) throw error
     },
     onSuccess: () => {
@@ -84,6 +87,23 @@ export function useArchiveTodayOrders() {
           queryKey: ['order-stats', restaurantId],
         })
       }
+    },
+  })
+}
+
+export function useArchivedOrders(restaurantId: string | null) {
+  return useQuery({
+    queryKey: ['archived-orders', restaurantId],
+    enabled: !!restaurantId,
+    queryFn: async (): Promise<Order[]> => {
+      const { data, error } = await supabase
+        .from('orders')
+        .select('*')
+        .eq('restaurant_id', restaurantId!)
+        .eq('is_archived', true)
+        .order('created_at', { ascending: false })
+      if (error) throw error
+      return (data ?? []).map((row) => toOrder(row as Record<string, unknown>))
     },
   })
 }

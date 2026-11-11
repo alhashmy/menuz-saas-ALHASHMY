@@ -6,7 +6,7 @@ const MAX_AUDIO_BYTES = 5 * 1024 * 1024
 export function getNotificationSoundUrl(soundUrl: string | null | undefined) {
   return soundUrl?.startsWith('https://') || soundUrl?.startsWith('http://')
     ? soundUrl
-    : '/notification.mp3'
+    : `${import.meta.env.BASE_URL}notification.mp3`
 }
 
 export async function uploadNotificationSound(

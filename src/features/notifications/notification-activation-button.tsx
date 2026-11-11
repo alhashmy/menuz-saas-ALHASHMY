@@ -1,9 +1,8 @@
 import { BellRing } from 'lucide-react'
 import { toast } from 'sonner'
 import { useNotificationStore } from '@/stores/notification-store'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { getNotificationSoundUrl } from './sound'
+import { unlockNotificationAudio } from './notification-audio'
 
 export function NotificationActivationButton() {
   const soundEnabled = useNotificationStore((state) => state.soundEnabled)
@@ -16,25 +15,9 @@ export function NotificationActivationButton() {
     (state) => state.setAudioUnlocked
   )
 
-  if (!hasHydrated) return null
-
-  if (soundEnabled) {
-    return (
-      <Badge variant='secondary' className='gap-1.5 whitespace-nowrap'>
-        <BellRing className='size-3.5' /> 🔔 الإشعارات مفعلة
-      </Badge>
-    )
-  }
-
   async function activate() {
-    const audio = new Audio(getNotificationSoundUrl(notificationSoundUrl))
-    audio.preload = 'auto'
-    audio.volume = 0
     try {
-      await audio.play()
-      audio.pause()
-      audio.currentTime = 0
-      audio.volume = 1
+      await unlockNotificationAudio(notificationSoundUrl)
       setSoundEnabled(true)
       setAudioUnlocked(true)
       if ('Notification' in window && Notification.permission === 'default') {
@@ -50,10 +33,12 @@ export function NotificationActivationButton() {
     <Button
       type='button'
       size='sm'
-      variant='secondary'
+      variant={soundEnabled ? 'outline' : 'secondary'}
       onClick={() => void activate()}
+      disabled={!hasHydrated}
+      aria-label={soundEnabled ? 'الإشعارات مفعلة، اضغط لإعادة تجهيز الصوت' : 'تفعيل الإشعارات الصوتية'}
     >
-      <BellRing className='size-4' /> تفعيل الإشعارات الصوتية
+      <BellRing className='size-4' /> {soundEnabled ? '🔔 الإشعارات مفعلة' : 'تفعيل الإشعارات الصوتية'}
     </Button>
   )
 }

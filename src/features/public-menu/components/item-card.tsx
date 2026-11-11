@@ -106,6 +106,7 @@ export function ItemCard({
           {offer && (
             <span className='menu-item-card__offer'>{offerLabel(offer)}</span>
           )}
+          {item.is_bestseller && <span className='menu-item-card__offer'>🔥 الأكثر مبيعاً</span>}
           {!isAvailable && (
             <span className='menu-item-card__unavailable'>غير متوفر</span>
           )}

@@ -3,6 +3,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
 import {
   Archive,
+  History,
   BellRing,
   Eye,
   Loader2,
@@ -16,11 +17,12 @@ import { Button } from '@/components/ui/button'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import {
-  useArchiveTodayOrders,
+  useArchiveResolvedOrders,
   useDeleteOrder,
   useOrders,
 } from '@/features/orders/api'
 import { OrderDetailsSheet } from '@/features/orders/components/OrderDetailsSheet'
+import { OrderArchive } from '@/features/orders/components/OrderArchive'
 import type { Order, OrderStatus } from '@/features/orders/types'
 
 const statusMeta: Record<OrderStatus, { label: string; className: string }> = {
@@ -119,12 +121,13 @@ export function OrdersPage() {
   const restaurantId = restaurant?.id ?? null
   const queryClient = useQueryClient()
   const { data: orders = [], isLoading } = useOrders(restaurantId)
-  const archiveToday = useArchiveTodayOrders()
+  const archiveResolved = useArchiveResolvedOrders()
   const deleteOrder = useDeleteOrder()
   const [filter, setFilter] = useState<'all' | OrderStatus>('all')
   const [detailsOrder, setDetailsOrder] = useState<Order | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<Order | null>(null)
   const [archiveConfirmOpen, setArchiveConfirmOpen] = useState(false)
+  const [showArchive, setShowArchive] = useState(false)
   const visibleOrders = useMemo(
     () =>
       filter === 'all'
@@ -133,10 +136,10 @@ export function OrdersPage() {
     [filter, orders]
   )
 
-  async function handleArchiveToday() {
+  async function handleArchiveResolved() {
     try {
-      await archiveToday.mutateAsync()
-      toast.success('تمت أرشفة طلبات اليوم.')
+      await archiveResolved.mutateAsync()
+      toast.success('تمت أرشفة الطلبات المكتملة والملغية.')
       setArchiveConfirmOpen(false)
     } catch (error) {
       toast.error(
@@ -179,17 +182,20 @@ export function OrdersPage() {
           <Button variant='outline' size='sm' onClick={refresh}>
             <RefreshCw className='size-4' /> تحديث
           </Button>
+          <Button variant={showArchive ? 'secondary' : 'outline'} size='sm' onClick={() => setShowArchive((visible) => !visible)}>
+            <History className='size-4' /> سجل الأرشيف
+          </Button>
           <Button
             variant='outline'
             size='sm'
             onClick={() => setArchiveConfirmOpen(true)}
-            disabled={!orders.length}
+            disabled={!orders.some((order) => order.status === 'completed' || order.status === 'cancelled')}
           >
-            <Archive className='size-4' /> أرشفة طلبات اليوم
+            <Archive className='size-4' /> أرشفة الطلبات المنتهية
           </Button>
         </div>
       </header>
-      <Tabs
+      {showArchive ? <OrderArchive restaurantId={restaurantId} /> : <><Tabs
         value={filter}
         onValueChange={(value) => setFilter(value as 'all' | OrderStatus)}
       >
@@ -224,7 +230,7 @@ export function OrdersPage() {
             />
           ))}
         </section>
-      )}
+      )}</>}
       {detailsOrder && (
         <OrderDetailsSheet
           open
@@ -247,12 +253,12 @@ export function OrdersPage() {
       <ConfirmDialog
         open={archiveConfirmOpen}
         onOpenChange={setArchiveConfirmOpen}
-        title='أرشفة طلبات اليوم؟'
-        desc='ستختفي كل طلبات اليوم من لوحة الطلبات النشطة، وستبقى محفوظة في قاعدة البيانات.'
+        title='أرشفة الطلبات المنتهية؟'
+        desc='ستؤرشف كل الطلبات المكتملة والملغية غير المؤرشفة، مهما كان تاريخها، وستبقى متاحة في سجل الأرشيف.'
         confirmText='أرشفة الطلبات'
         cancelBtnText='إلغاء'
-        isLoading={archiveToday.isPending}
-        handleConfirm={handleArchiveToday}
+        isLoading={archiveResolved.isPending}
+        handleConfirm={handleArchiveResolved}
       />
     </div>
   )

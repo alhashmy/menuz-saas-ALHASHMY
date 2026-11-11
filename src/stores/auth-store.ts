@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import type { Session, User } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
 
-export type StaffRole = 'owner' | 'manager' | 'staff'
+export type StaffRole = 'owner' | 'manager' | 'cashier' | 'staff'
 
 export interface RestaurantContext {
   id: string

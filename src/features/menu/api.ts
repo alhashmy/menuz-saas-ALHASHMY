@@ -164,6 +164,32 @@ export function useToggleItemAvailability() {
   })
 }
 
+export function useToggleItemBestseller() {
+  const queryClient = useQueryClient()
+  const restaurantId = useAuthStore((s) => s.restaurant?.id)
+  return useMutation({
+    mutationFn: async (input: { id: string; is_bestseller: boolean }) => {
+      const { error } = await supabase
+        .from('menu_items')
+        .update({ is_bestseller: input.is_bestseller })
+        .eq('id', input.id)
+      if (error) throw error
+    },
+    onMutate: async (input) => {
+      await queryClient.cancelQueries({ queryKey: ['menu-items', restaurantId] })
+      const previous = queryClient.getQueryData<MenuItem[]>(['menu-items', restaurantId])
+      queryClient.setQueryData<MenuItem[]>(['menu-items', restaurantId], (items) =>
+        items?.map((item) => item.id === input.id ? { ...item, is_bestseller: input.is_bestseller } : item)
+      )
+      return { previous }
+    },
+    onError: (_error, _input, context) => {
+      if (context?.previous) queryClient.setQueryData(['menu-items', restaurantId], context.previous)
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ['menu-items', restaurantId] }),
+  })
+}
+
 export function useDeleteMenuItem() {
   const queryClient = useQueryClient()
   const restaurantId = useAuthStore((s) => s.restaurant?.id)
