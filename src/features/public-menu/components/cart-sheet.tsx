@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { ArrowRight, Minus, Plus, ShoppingBag, Trash2 } from 'lucide-react'
+import { ArrowRight, Check, ChevronsUpDown, Minus, Plus, ShoppingBag, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { MAX_CART_ITEM_QUANTITY, useCartStore } from '@/stores/cart-store'
 import { getMenuImageUrl, supabase } from '@/lib/supabase'
@@ -7,6 +7,8 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command'
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet'
 import { useRestaurantSettingsApi } from '@/features/orders/restaurant-settings-api'
 import { isRestaurantAcceptingOrders, type OperatingHours } from '../api'
@@ -84,6 +86,7 @@ export function CartSheet({
   const [whatsappNumber, setWhatsAppNumber] = useState<string | null>(null)
   const [deliveryZones, setDeliveryZones] = useState<DeliveryZone[]>([])
   const [deliveryZoneId, setDeliveryZoneId] = useState('')
+  const [zonePickerOpen, setZonePickerOpen] = useState(false)
   const [now, setNow] = useState(() => new Date())
 
   const subtotal = useMemo(
@@ -93,7 +96,7 @@ export function CartSheet({
   const customerName = customerInfo.name.trim().replace(/\s+/g, ' ')
   const customerPhone = customerInfo.phone.trim()
   const customerAddress = customerInfo.address.trim().replace(/\s+/g, ' ')
-  const customerValid = customerName.length >= 2 && validPhone(customerPhone)
+  const customerValid = customerName.length >= 2 && validPhone(customerPhone) && customerAddress.length >= 5
   const selectedZone = deliveryZones.find((zone) => zone.id === deliveryZoneId)
   const deliveryFee = selectedZone?.delivery_fee ?? 0
   const totalWithDelivery = subtotal + deliveryFee
@@ -159,7 +162,7 @@ export function CartSheet({
         p_restaurant_id: restaurantId,
         p_customer_name: customerName,
         p_customer_phone: customerPhone,
-        p_customer_address: customerAddress || null,
+        p_customer_address: customerAddress,
         p_promo_code: promoCode.trim().slice(0, 64) || null,
         p_items: items.map((item) => ({
           item_id: item.id,
@@ -465,8 +468,7 @@ export function CartSheet({
               </div>
               <div className='space-y-2'>
                 <Label htmlFor='customer-address'>
-                  العنوان{' '}
-                  <span className='text-muted-foreground'>(اختياري)</span>
+                  العنوان التفصيلي <span className='text-destructive'>*</span>
                 </Label>
                 <Input
                   id='customer-address'
@@ -480,25 +482,22 @@ export function CartSheet({
                     }))
                   }
                   placeholder='المنطقة، الشارع، أقرب نقطة دالة'
+                  required
                 />
               </div>
               {deliveryZones.length > 0 && (
                 <div className='space-y-2'>
                   <Label htmlFor='delivery-zone'>منطقة التوصيل</Label>
-                  <select
-                    id='delivery-zone'
-                    value={deliveryZoneId}
-                    onChange={(event) => setDeliveryZoneId(event.target.value)}
-                    className='flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm'
-                  >
-                    <option value=''>اختر المنطقة</option>
-                    {deliveryZones.map((zone) => (
-                      <option key={zone.id} value={zone.id}>
-                        {zone.name} —{' '}
-                        {zone.delivery_fee.toLocaleString('ar-IQ')} د.ع
-                      </option>
-                    ))}
-                  </select>
+                  <Popover open={zonePickerOpen} onOpenChange={setZonePickerOpen}>
+                    <PopoverTrigger asChild>
+                      <Button id='delivery-zone' type='button' variant='outline' role='combobox' aria-expanded={zonePickerOpen} className='w-full justify-between font-normal'>
+                        {selectedZone ? `${selectedZone.name} — ${selectedZone.delivery_fee.toLocaleString('ar-IQ')} د.ع` : 'ابحث عن منطقة التوصيل'} <ChevronsUpDown className='size-4 opacity-50' />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className='w-[var(--radix-popover-trigger-width)] p-0' align='start'>
+                      <Command><CommandInput placeholder='اكتب اسم المنطقة…' /><CommandList><CommandEmpty>لا توجد منطقة مطابقة.</CommandEmpty><CommandGroup>{deliveryZones.map((zone) => <CommandItem key={zone.id} value={`${zone.name} ${zone.delivery_fee}`} onSelect={() => { setDeliveryZoneId(zone.id); setZonePickerOpen(false) }}><Check className={`size-4 ${deliveryZoneId === zone.id ? 'opacity-100' : 'opacity-0'}`} />{zone.name} — {zone.delivery_fee.toLocaleString('ar-IQ')} د.ع</CommandItem>)}</CommandGroup></CommandList></Command>
+                    </PopoverContent>
+                  </Popover>
                   {selectedZone && (
                     <p className='text-xs text-muted-foreground'>
                       سعر التوصيل: {deliveryFee.toLocaleString('ar-IQ')} د.ع
@@ -512,6 +511,7 @@ export function CartSheet({
                 أدخل رقم هاتف صالحًا.
               </p>
             )}
+            {customerInfo.address && customerAddress.length >= 5 ? null : <p className='mt-3 text-xs text-destructive'>اكتب العنوان التفصيلي (5 أحرف على الأقل).</p>}
             <Button
               type='submit'
               className='mt-auto w-full py-5 font-bold'

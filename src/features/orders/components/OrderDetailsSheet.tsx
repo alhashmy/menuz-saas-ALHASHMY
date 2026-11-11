@@ -261,6 +261,13 @@ export function OrderDetailsSheet({
               </div>
 
               {/* Total */}
+              {order.discount_amount > 0 && (
+                <div className='rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-200'>
+                  <p className='font-semibold'>تفاصيل الخصم</p>
+                  <p className='mt-1'>{order.discount_description ?? (order.discount_code ? `بروموكود ${order.discount_code}` : 'خصم مطبق على الطلب')}</p>
+                  <p className='mt-1'>قيمة الخصم الفعلية: {Number(order.discount_amount).toLocaleString('ar-IQ')} د.ع</p>
+                </div>
+              )}
               <div className='mt-3 flex items-center justify-between border-t border-border pt-3 text-lg font-bold'>
                 <span>الإجمالي النهائي</span>
                 <span dir='ltr' className='text-primary'>

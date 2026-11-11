@@ -12,6 +12,13 @@ export interface PublicMenuItem {
   image_path: string | null
   is_available: boolean
   is_bestseller: boolean
+  reviews: PublicMealReview[]
+}
+
+export interface PublicMealReview {
+  id: string
+  review_text: string
+  stars: number
 }
 
 export interface PublicMenuCategory {
@@ -240,7 +247,7 @@ export function usePublicMenu(restaurantSlug: string) {
         supabase
           .from('menu_categories')
           .select(
-            'id, name, name_ar, sort_order, menu_items(id, category_id, name, name_ar, description, description_ar, price, image_path, is_available, is_bestseller, sort_order)'
+            'id, name, name_ar, sort_order, menu_items(id, category_id, name, name_ar, description, description_ar, price, image_path, is_available, is_bestseller, sort_order, menu_item_reviews(id, review_text, stars))'
           )
           .eq('restaurant_id', restaurant.id)
           .eq('is_active', true)
@@ -304,11 +311,12 @@ export function usePublicMenu(restaurantSlug: string) {
           name_ar: cat.name_ar,
           sort_order: cat.sort_order,
           items: (
-            (cat.menu_items ?? []) as (PublicMenuItem & {
+            (cat.menu_items ?? []) as (Omit<PublicMenuItem, 'reviews'> & {
               is_available: boolean
               sort_order: number
+              menu_item_reviews?: PublicMealReview[]
             })[]
-          ).sort((a, b) => Number(b.is_bestseller) - Number(a.is_bestseller) || a.sort_order - b.sort_order),
+          ).map((item) => ({ ...item, reviews: item.menu_item_reviews ?? [] })).sort((a, b) => Number(b.is_bestseller) - Number(a.is_bestseller) || a.sort_order - b.sort_order),
         })
       )
 

@@ -149,6 +149,12 @@ export function ItemDetailsSheet({
                     {item.description_ar ?? item.description}
                   </SheetDescription>
                 )}
+                {item.reviews.length > 0 && (
+                  <div className={cn('mt-3 rounded-xl border p-3 text-start', border)}>
+                    <p className='text-sm font-bold'>تقييمات الزبائن</p>
+                    {item.reviews.slice(0, 3).map((review) => <div key={review.id} className={cn('mt-2 text-sm', muted)}><span className='font-medium text-amber-500'>{'★'.repeat(review.stars)}{'☆'.repeat(5 - review.stars)}</span><span className='me-2'>{review.review_text}</span></div>)}
+                  </div>
+                )}
               </SheetHeader>
 
               <div className='flex items-baseline gap-2'>

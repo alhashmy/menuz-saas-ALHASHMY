@@ -13,6 +13,9 @@ function toOrder(row: Record<string, unknown>): Order {
     items: row.items as Order['items'],
     discount_code: row.discount_code as string | null,
     discount_amount: row.discount_amount as number,
+    discount_kind: row.discount_kind as Order['discount_kind'],
+    discount_value: row.discount_value as number | null,
+    discount_description: row.discount_description as string | null,
     total_amount: row.total_amount as number,
     status: row.status as OrderStatus,
     daily_sequence: row.daily_sequence as number,
@@ -72,17 +75,15 @@ export function useArchiveResolvedOrders() {
   return useMutation({
     mutationFn: async () => {
       if (!restaurantId) throw new Error('لا يوجد مطعم مرتبط بالحساب الحالي.')
-      const { error } = await supabase
-        .from('orders')
-        .update({ is_archived: true })
-        .eq('restaurant_id', restaurantId)
-        .eq('is_archived', false)
-        .in('status', ['completed', 'cancelled'])
+      const { error } = await supabase.rpc('archive_resolved_orders', {
+        p_restaurant_id: restaurantId,
+      })
       if (error) throw error
     },
     onSuccess: () => {
       if (restaurantId) {
         queryClient.invalidateQueries({ queryKey: ['orders', restaurantId] })
+        queryClient.invalidateQueries({ queryKey: ['archived-orders', restaurantId] })
         queryClient.invalidateQueries({
           queryKey: ['order-stats', restaurantId],
         })
@@ -91,17 +92,21 @@ export function useArchiveResolvedOrders() {
   })
 }
 
-export function useArchivedOrders(restaurantId: string | null) {
+export function useArchivedOrders(restaurantId: string | null, date?: string) {
   return useQuery({
-    queryKey: ['archived-orders', restaurantId],
+    queryKey: ['archived-orders', restaurantId, date ?? 'all'],
     enabled: !!restaurantId,
     queryFn: async (): Promise<Order[]> => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('orders')
         .select('*')
         .eq('restaurant_id', restaurantId!)
         .eq('is_archived', true)
-        .order('created_at', { ascending: false })
+      if (date) {
+        const range = getBaghdadDateRange(date, date)
+        query = query.gte('created_at', range.start).lt('created_at', range.end)
+      }
+      const { data, error } = await query.order('created_at', { ascending: false })
       if (error) throw error
       return (data ?? []).map((row) => toOrder(row as Record<string, unknown>))
     },

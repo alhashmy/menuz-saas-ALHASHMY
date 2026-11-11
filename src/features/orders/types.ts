@@ -18,6 +18,9 @@ export interface Order {
   items: OrderItem[]
   discount_code: string | null
   discount_amount: number
+  discount_kind: 'percentage' | 'fixed' | null
+  discount_value: number | null
+  discount_description: string | null
   total_amount: number
   status: OrderStatus
   daily_sequence: number

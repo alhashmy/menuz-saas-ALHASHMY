@@ -1,6 +1,8 @@
 import { Download, Loader2 } from 'lucide-react'
+import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
 import { useArchivedOrders } from '../api'
 import type { Order, OrderStatus } from '../types'
 
@@ -45,7 +47,8 @@ function downloadDayCsv(day: string, orders: Order[]) {
 }
 
 export function OrderArchive({ restaurantId }: { restaurantId: string | null }) {
-  const { data: orders = [], isLoading } = useArchivedOrders(restaurantId)
+  const [date, setDate] = useState('')
+  const { data: orders = [], isLoading } = useArchivedOrders(restaurantId, date || undefined)
   const groups = new Map<string, Order[]>()
   for (const order of orders) {
     const key = dayKey(order.created_at)
@@ -54,9 +57,9 @@ export function OrderArchive({ restaurantId }: { restaurantId: string | null }) 
   const days = [...groups.entries()].sort(([a], [b]) => b.localeCompare(a))
 
   if (isLoading) return <div className='flex h-48 items-center justify-center text-muted-foreground'><Loader2 className='me-2 size-5 animate-spin' /> جارٍ تحميل الأرشيف…</div>
-  if (!days.length) return <div className='rounded-2xl border border-dashed p-10 text-center text-muted-foreground'>لا توجد طلبات مؤرشفة حتى الآن.</div>
+  if (!days.length) return <div className='space-y-3'><ArchiveDatePicker value={date} onChange={setDate} /><div className='rounded-2xl border border-dashed p-10 text-center text-muted-foreground'>لا توجد طلبات مؤرشفة في هذه الفترة.</div></div>
 
-  return <section className='space-y-3'>
+  return <section className='space-y-3'><ArchiveDatePicker value={date} onChange={setDate} />
     {days.map(([day, dayOrders]) => {
       const completedTotal = dayOrders.filter((order) => order.status === 'completed').reduce((sum, order) => sum + Number(order.total_amount || 0), 0)
       const title = new Intl.DateTimeFormat('ar-IQ', { timeZone: 'Asia/Baghdad', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }).format(new Date(`${day}T12:00:00+03:00`))
@@ -79,4 +82,8 @@ export function OrderArchive({ restaurantId }: { restaurantId: string | null }) 
       </details>
     })}
   </section>
+}
+
+function ArchiveDatePicker({ value, onChange }: { value: string; onChange: (value: string) => void }) {
+  return <div className='flex flex-wrap items-center gap-2 rounded-xl border bg-card p-3'><label htmlFor='archive-date' className='text-sm font-medium'>سجل يوم محدد</label><Input id='archive-date' type='date' value={value} onChange={(event) => onChange(event.target.value)} className='w-auto' /><Button type='button' variant='ghost' size='sm' disabled={!value} onClick={() => onChange('')}>كل الأيام</Button></div>
 }

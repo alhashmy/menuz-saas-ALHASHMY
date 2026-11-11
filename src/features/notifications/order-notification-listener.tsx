@@ -124,7 +124,21 @@ export function OrderNotificationListener() {
           })
         }
       )
-      .subscribe()
+      .subscribe((status, error) => {
+        if (status === 'SUBSCRIBED') {
+          console.info('[Realtime] orders listener subscribed', { restaurantId })
+          return
+        }
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          console.error('[Realtime] orders listener failed', {
+            restaurantId,
+            status,
+            error,
+            supabaseUrl: import.meta.env.VITE_SUPABASE_URL,
+          })
+          toast.error('تعذر ربط التنبيهات الفورية. أعد تحميل الصفحة أو راجع إعدادات الإنتاج.')
+        }
+      })
     return () => {
       void supabase.removeChannel(channel)
     }
