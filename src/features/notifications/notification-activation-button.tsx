@@ -6,7 +6,6 @@ import { unlockNotificationAudio } from './notification-audio'
 
 export function NotificationActivationButton() {
   const soundEnabled = useNotificationStore((state) => state.soundEnabled)
-  const hasHydrated = useNotificationStore((state) => state.hasHydrated)
   const notificationSoundUrl = useNotificationStore(
     (state) => state.notificationSoundUrl
   )
@@ -16,6 +15,7 @@ export function NotificationActivationButton() {
   )
 
   async function activate() {
+    console.log('Bell clicked! Current sound URL is:', notificationSoundUrl)
     try {
       await unlockNotificationAudio(notificationSoundUrl)
       setSoundEnabled(true)
@@ -35,7 +35,6 @@ export function NotificationActivationButton() {
       size='sm'
       variant={soundEnabled ? 'outline' : 'secondary'}
       onClick={() => void activate()}
-      disabled={!hasHydrated}
       aria-label={soundEnabled ? 'الإشعارات مفعلة، اضغط لإعادة تجهيز الصوت' : 'تفعيل الإشعارات الصوتية'}
     >
       <BellRing className='size-4' /> {soundEnabled ? '🔔 الإشعارات مفعلة' : 'تفعيل الإشعارات الصوتية'}

@@ -95,6 +95,13 @@ export function OrderNotificationListener() {
               : '—'
 
           if (soundEnabled) {
+            // Debug: log sound URL status before attempting playback
+            console.log(
+              'New order received. Attempting to play sound. URL exists?:',
+              !!notificationSoundUrl,
+              'URL:',
+              notificationSoundUrl
+            )
             // Play directly in INSERT callback; catch prevents app crash if autoplay blocked
             void playNotificationAudio(notificationSoundUrl).catch((error: unknown) => {
               console.warn('Audio playback prevented (autoplay policy):', error)
