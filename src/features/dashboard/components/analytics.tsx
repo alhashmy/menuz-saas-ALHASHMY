@@ -5,8 +5,8 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import { AnalyticsChart } from './analytics-chart'
 import type { OrderStats } from '@/features/orders/types'
+import { AnalyticsChart } from './analytics-chart'
 
 interface AnalyticsProps {
   stats: OrderStats | undefined
@@ -17,8 +17,8 @@ export function Analytics({ stats }: AnalyticsProps) {
     <div className='space-y-4'>
       <Card>
         <CardHeader>
-          <CardTitle>Traffic Overview</CardTitle>
-          <CardDescription>Weekly clicks and unique visitors</CardDescription>
+          <CardTitle>نظرة على الأداء</CardTitle>
+          <CardDescription>ملخص الطلبات والمبيعات المسجلة.</CardDescription>
         </CardHeader>
         <CardContent className='px-6'>
           <AnalyticsChart monthlyRevenue={stats?.monthlyRevenue ?? []} />
@@ -27,7 +27,9 @@ export function Analytics({ stats }: AnalyticsProps) {
       <div className='grid gap-4 sm:grid-cols-2 lg:grid-cols-4'>
         <Card>
           <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-            <CardTitle className='text-sm font-medium'>Total Orders</CardTitle>
+            <CardTitle className='text-sm font-medium'>
+              إجمالي الطلبات
+            </CardTitle>
             <svg
               xmlns='http://www.w3.org/2000/svg'
               viewBox='0 0 24 24'
@@ -49,7 +51,9 @@ export function Analytics({ stats }: AnalyticsProps) {
         </Card>
         <Card>
           <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-            <CardTitle className='text-sm font-medium'>Total Revenue</CardTitle>
+            <CardTitle className='text-sm font-medium'>
+              إجمالي المبيعات
+            </CardTitle>
             <svg
               xmlns='http://www.w3.org/2000/svg'
               viewBox='0 0 24 24'
@@ -73,7 +77,9 @@ export function Analytics({ stats }: AnalyticsProps) {
         </Card>
         <Card>
           <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-            <CardTitle className='text-sm font-medium'>Items Sold</CardTitle>
+            <CardTitle className='text-sm font-medium'>
+              الأصناف المباعة
+            </CardTitle>
             <svg
               xmlns='http://www.w3.org/2000/svg'
               viewBox='0 0 24 24'
@@ -94,7 +100,7 @@ export function Analytics({ stats }: AnalyticsProps) {
         </Card>
         <Card>
           <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-            <CardTitle className='text-sm font-medium'>Avg. Order</CardTitle>
+            <CardTitle className='text-sm font-medium'>متوسط الطلب</CardTitle>
             <svg
               xmlns='http://www.w3.org/2000/svg'
               viewBox='0 0 24 24'
@@ -111,9 +117,11 @@ export function Analytics({ stats }: AnalyticsProps) {
           </CardHeader>
           <CardContent>
             <div className='text-2xl font-bold' dir='ltr'>
-              د.ع {
-                ((stats?.totalRevenue ?? 0) / Math.max(stats?.totalOrders ?? 1, 1)).toFixed(2)
-              }
+              د.ع{' '}
+              {(
+                (stats?.totalRevenue ?? 0) /
+                Math.max(stats?.totalOrders ?? 1, 1)
+              ).toFixed(2)}
             </div>
             <p className='text-xs text-muted-foreground'>متوسط قيمة الطلب</p>
           </CardContent>

@@ -5,20 +5,23 @@ interface OverviewProps {
 }
 
 export function Overview({ monthlyRevenue }: OverviewProps) {
-  const data = monthlyRevenue.length > 0 ? monthlyRevenue : [
-    { month: 'jan', revenue: 0 },
-    { month: 'feb', revenue: 0 },
-    { month: 'mar', revenue: 0 },
-    { month: 'apr', revenue: 0 },
-    { month: 'may', revenue: 0 },
-    { month: 'jun', revenue: 0 },
-    { month: 'jul', revenue: 0 },
-    { month: 'aug', revenue: 0 },
-    { month: 'sep', revenue: 0 },
-    { month: 'oct', revenue: 0 },
-    { month: 'nov', revenue: 0 },
-    { month: 'dec', revenue: 0 },
-  ]
+  const data =
+    monthlyRevenue.length > 0
+      ? monthlyRevenue
+      : [
+          { month: 'كانون الثاني', revenue: 0 },
+          { month: 'شباط', revenue: 0 },
+          { month: 'آذار', revenue: 0 },
+          { month: 'نيسان', revenue: 0 },
+          { month: 'أيار', revenue: 0 },
+          { month: 'حزيران', revenue: 0 },
+          { month: 'تموز', revenue: 0 },
+          { month: 'آب', revenue: 0 },
+          { month: 'أيلول', revenue: 0 },
+          { month: 'تشرين الأول', revenue: 0 },
+          { month: 'تشرين الثاني', revenue: 0 },
+          { month: 'كانون الأول', revenue: 0 },
+        ]
 
   return (
     <ResponsiveContainer width='100%' height={350}>

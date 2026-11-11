@@ -1,11 +1,24 @@
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import type { Order } from '@/features/orders/types'
-import { useUpdateOrderStatus } from '@/features/orders/api'
 import { useState } from 'react'
 import { Printer } from 'lucide-react'
+import { toast } from 'sonner'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet'
+import { Textarea } from '@/components/ui/textarea'
+import { useUpdateOrderStatus } from '@/features/orders/api'
+import type { Order } from '@/features/orders/types'
 
 const STATUS_LABELS: Record<Order['status'], string> = {
   pending: 'قيد الانتظار',
@@ -16,7 +29,10 @@ const STATUS_LABELS: Record<Order['status'], string> = {
   cancelled: 'ملغي',
 }
 
-const STATUS_VARIANTS: Record<Order['status'], 'default' | 'secondary' | 'destructive' | 'outline'> = {
+const STATUS_VARIANTS: Record<
+  Order['status'],
+  'default' | 'secondary' | 'destructive' | 'outline'
+> = {
   pending: 'secondary',
   confirmed: 'secondary',
   preparing: 'outline',
@@ -32,19 +48,35 @@ interface OrderDetailsSheetProps {
   restaurantName?: string
 }
 
-export function OrderDetailsSheet({ open, onOpenChange, order, restaurantName }: OrderDetailsSheetProps) {
+export function OrderDetailsSheet({
+  open,
+  onOpenChange,
+  order,
+  restaurantName,
+}: OrderDetailsSheetProps) {
   const updateOrderStatus = useUpdateOrderStatus()
   const [dialogStatus, setDialogStatus] = useState(order.status)
+  const [cancellationReason, setCancellationReason] = useState(
+    order.cancellation_reason ?? ''
+  )
   const [isUpdating, setIsUpdating] = useState(false)
   const dynamicRestaurantName = restaurantName || 'اسم المطعم'
 
   async function handleStatusChange() {
+    if (dialogStatus === 'cancelled' && cancellationReason.trim().length < 2) {
+      toast.error('يرجى كتابة سبب الإلغاء قبل حفظ الحالة.')
+      return
+    }
     setIsUpdating(true)
     try {
-      await updateOrderStatus.mutateAsync({ id: order.id, status: dialogStatus })
+      await updateOrderStatus.mutateAsync({
+        id: order.id,
+        status: dialogStatus,
+        cancellationReason,
+      })
       onOpenChange(false)
-    } catch {
-      // error toast handled globally
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'تعذر تحديث الطلب.')
     } finally {
       setIsUpdating(false)
     }
@@ -162,11 +194,13 @@ export function OrderDetailsSheet({ open, onOpenChange, order, restaurantName }:
   return (
     <>
       <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent className='max-w-lg w-full p-0 print:hidden'>
-          <SheetHeader className='p-5 flex items-center justify-between gap-2'>
+        <SheetContent className='w-full max-w-lg p-0 print:hidden'>
+          <SheetHeader className='flex items-center justify-between gap-2 p-5'>
             <SheetTitle className='text-lg font-bold'>تفاصيل الطلب</SheetTitle>
             <div className='flex items-center gap-1 text-muted-foreground'>
-              <span className='text-xs font-medium'>#{order.id.slice(0, 8)}</span>
+              <span className='text-xs font-medium'>
+                #{order.id.slice(0, 8)}
+              </span>
             </div>
           </SheetHeader>
 
@@ -174,7 +208,9 @@ export function OrderDetailsSheet({ open, onOpenChange, order, restaurantName }:
             <div className='space-y-4'>
               {/* Customer Info */}
               <div className='space-y-2'>
-                <h3 className='text-sm font-semibold text-muted-foreground'>بيانات الزبون</h3>
+                <h3 className='text-sm font-semibold text-muted-foreground'>
+                  بيانات الزبون
+                </h3>
                 <div className='grid gap-2 text-sm'>
                   <div className='flex justify-between border-b pb-1'>
                     <span className='text-muted-foreground'>الاسم</span>
@@ -182,12 +218,14 @@ export function OrderDetailsSheet({ open, onOpenChange, order, restaurantName }:
                   </div>
                   <div className='flex justify-between border-b pb-1'>
                     <span className='text-muted-foreground'>الهاتف</span>
-                    <span className='font-mono font-medium'>{order.customer_phone}</span>
+                    <span className='font-mono font-medium'>
+                      {order.customer_phone}
+                    </span>
                   </div>
                   {order.customer_address && (
                     <div className='flex justify-between border-b pb-1'>
                       <span className='text-muted-foreground'>العنوان</span>
-                      <span className='text-muted-foreground max-w-xs truncate'>
+                      <span className='max-w-xs truncate text-muted-foreground'>
                         {order.customer_address}
                       </span>
                     </div>
@@ -197,10 +235,15 @@ export function OrderDetailsSheet({ open, onOpenChange, order, restaurantName }:
 
               {/* Order Items */}
               <div className='space-y-2'>
-                <h3 className='text-sm font-semibold text-muted-foreground'>الوجبات المطلوبة</h3>
+                <h3 className='text-sm font-semibold text-muted-foreground'>
+                  الوجبات المطلوبة
+                </h3>
                 <div className='space-y-2'>
                   {(order.items ?? []).map((item, idx) => (
-                    <div key={item.menu_item_id ?? idx} className='flex items-center justify-between border-b pb-2 text-sm'>
+                    <div
+                      key={item.menu_item_id ?? idx}
+                      className='flex items-center justify-between border-b pb-2 text-sm'
+                    >
                       <div className='flex items-center gap-2'>
                         <span className='font-medium'>{item.name}</span>
                       </div>
@@ -218,7 +261,7 @@ export function OrderDetailsSheet({ open, onOpenChange, order, restaurantName }:
               </div>
 
               {/* Total */}
-              <div className='flex items-center justify-between border-t border-border pt-3 mt-3 text-lg font-bold'>
+              <div className='mt-3 flex items-center justify-between border-t border-border pt-3 text-lg font-bold'>
                 <span>الإجمالي النهائي</span>
                 <span dir='ltr' className='text-primary'>
                   {(order.total_amount ?? 0).toLocaleString('ar-IQ')} د.ع
@@ -228,13 +271,17 @@ export function OrderDetailsSheet({ open, onOpenChange, order, restaurantName }:
           </div>
 
           {/* Status Selector */}
-          <div className='px-5 py-4 border-t border-border space-y-3'>
+          <div className='space-y-3 border-t border-border px-5 py-4'>
             <div className='space-y-2'>
               <label className='text-sm font-medium text-muted-foreground'>
                 تغيير حالة الطلب
               </label>
               <Select
-                onValueChange={(val) => setDialogStatus(val as Order['status'])}
+                onValueChange={(val) => {
+                  const status = val as Order['status']
+                  setDialogStatus(status)
+                  if (status !== 'cancelled') setCancellationReason('')
+                }}
                 value={dialogStatus}
               >
                 <SelectTrigger className='w-full'>
@@ -252,10 +299,29 @@ export function OrderDetailsSheet({ open, onOpenChange, order, restaurantName }:
             <Badge variant={STATUS_VARIANTS[dialogStatus]} className='mt-2'>
               {STATUS_LABELS[dialogStatus]}
             </Badge>
+            {dialogStatus === 'cancelled' && (
+              <div className='space-y-2'>
+                <label
+                  htmlFor='cancellation-reason'
+                  className='text-sm font-medium text-destructive'
+                >
+                  سبب الإلغاء
+                </label>
+                <Textarea
+                  id='cancellation-reason'
+                  value={cancellationReason}
+                  onChange={(event) =>
+                    setCancellationReason(event.target.value.slice(0, 240))
+                  }
+                  placeholder='مثال: طلب العميل الإلغاء أو العنوان خارج نطاق التوصيل'
+                  required
+                />
+              </div>
+            )}
           </div>
 
           {/* Actions Footer */}
-          <div className='px-5 py-4 border-t border-border flex items-center justify-between gap-3'>
+          <div className='flex items-center justify-between gap-3 border-t border-border px-5 py-4'>
             <Button
               variant='outline'
               size='sm'
@@ -279,7 +345,7 @@ export function OrderDetailsSheet({ open, onOpenChange, order, restaurantName }:
               className='print:hidden'
               onClick={handlePrintReceipt}
             >
-              <Printer className='size-4 mr-1.5' />
+              <Printer className='mr-1.5 size-4' />
               طباعة الفاتورة
             </Button>
           </div>

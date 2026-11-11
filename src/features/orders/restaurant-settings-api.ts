@@ -7,6 +7,7 @@ export interface RestaurantSettings {
   slug: string
   ordering_mode: 'system' | 'whatsapp'
   whatsapp_number: string | null
+  notification_sound_url: string | null
 }
 
 export function useRestaurantSettingsApi() {
@@ -14,7 +15,9 @@ export function useRestaurantSettingsApi() {
     async (restaurantId: string): Promise<RestaurantSettings | null> => {
       const { data, error } = await supabase
         .from('restaurants')
-        .select('id, name, slug, ordering_mode, whatsapp_number')
+        .select(
+          'id, name, slug, ordering_mode, whatsapp_number, notification_sound_url'
+        )
         .eq('id', restaurantId)
         .maybeSingle()
 
@@ -26,6 +29,7 @@ export function useRestaurantSettingsApi() {
             slug: data.slug,
             ordering_mode: data.ordering_mode as 'system' | 'whatsapp',
             whatsapp_number: data.whatsapp_number,
+            notification_sound_url: data.notification_sound_url,
           }
         : null
     },
@@ -40,6 +44,7 @@ export function useRestaurantSettingsApi() {
         slug?: string
         ordering_mode?: 'system' | 'whatsapp'
         whatsapp_number?: string | null
+        notification_sound_url?: string | null
       }
     ): Promise<void> => {
       const { error } = await supabase

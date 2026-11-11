@@ -3,6 +3,51 @@ import { useAuthStore } from '@/stores/auth-store'
 import { supabase } from '@/lib/supabase'
 import type { Order, OrderStats, CreateOrderInput, OrderStatus } from './types'
 
+function toOrder(row: Record<string, unknown>): Order {
+  return {
+    id: row.id as string,
+    restaurant_id: row.restaurant_id as string,
+    customer_name: row.customer_name as string,
+    customer_phone: row.customer_phone as string,
+    customer_address: row.customer_address as string | null,
+    items: row.items as Order['items'],
+    discount_code: row.discount_code as string | null,
+    discount_amount: row.discount_amount as number,
+    total_amount: row.total_amount as number,
+    status: row.status as OrderStatus,
+    daily_sequence: row.daily_sequence as number,
+    is_archived: row.is_archived as boolean,
+    delivery_zone_id: row.delivery_zone_id as string | null,
+    delivery_fee: row.delivery_fee as number,
+    cancellation_reason: row.cancellation_reason as string | null,
+    created_at: row.created_at as string,
+  }
+}
+
+export function getBaghdadDateRange(startDate: string, endDate: string) {
+  const start = `${startDate}T00:00:00+03:00`
+  const end = new Date(`${endDate}T00:00:00+03:00`)
+  end.setUTCDate(end.getUTCDate() + 1)
+  return { start, end: end.toISOString() }
+}
+
+export async function fetchOrdersForDateRange(
+  restaurantId: string,
+  startDate: string,
+  endDate: string
+) {
+  const { start, end } = getBaghdadDateRange(startDate, endDate)
+  const { data, error } = await supabase
+    .from('orders')
+    .select('*')
+    .eq('restaurant_id', restaurantId)
+    .gte('created_at', start)
+    .lt('created_at', end)
+    .order('created_at', { ascending: false })
+  if (error) throw error
+  return (data ?? []).map((row) => toOrder(row as Record<string, unknown>))
+}
+
 export function useOrders(restaurantId: string | null) {
   return useQuery({
     queryKey: ['orders', restaurantId],
@@ -15,23 +60,7 @@ export function useOrders(restaurantId: string | null) {
         .eq('is_archived', false)
         .order('created_at', { ascending: false })
       if (error) throw error
-      return (data ?? []).map((row) => ({
-        id: row.id,
-        restaurant_id: row.restaurant_id,
-        customer_name: row.customer_name,
-        customer_phone: row.customer_phone,
-        customer_address: row.customer_address,
-        items: row.items,
-        discount_code: row.discount_code,
-        discount_amount: row.discount_amount,
-        total_amount: row.total_amount,
-        status: row.status,
-        daily_sequence: row.daily_sequence,
-        is_archived: row.is_archived,
-        delivery_zone_id: row.delivery_zone_id,
-        delivery_fee: row.delivery_fee,
-        created_at: row.created_at,
-      }))
+      return (data ?? []).map((row) => toOrder(row as Record<string, unknown>))
     },
   })
 }
@@ -154,10 +183,25 @@ export function useUpdateOrderStatus() {
   const restaurantId = useAuthStore((s) => s.restaurant?.id)
 
   return useMutation({
-    mutationFn: async ({ id, status }: { id: string; status: OrderStatus }) => {
+    mutationFn: async ({
+      id,
+      status,
+      cancellationReason,
+    }: {
+      id: string
+      status: OrderStatus
+      cancellationReason?: string | null
+    }) => {
+      if (status === 'cancelled' && !cancellationReason?.trim()) {
+        throw new Error('سبب الإلغاء مطلوب.')
+      }
       const { data, error } = await supabase
         .from('orders')
-        .update({ status })
+        .update({
+          status,
+          cancellation_reason:
+            status === 'cancelled' ? cancellationReason?.trim() : null,
+        })
         .eq('id', id)
         .select()
         .single()

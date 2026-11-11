@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
 import {
@@ -11,7 +11,6 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuthStore } from '@/stores/auth-store'
-import { supabase } from '@/lib/supabase'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -43,35 +42,6 @@ const filters: Array<{ value: 'all' | OrderStatus; label: string }> = [
   { value: 'ready', label: 'جاهزة' },
   { value: 'completed', label: 'مكتملة' },
 ]
-
-function playNotificationChime() {
-  try {
-    const AudioContextClass =
-      window.AudioContext ||
-      (window as typeof window & { webkitAudioContext?: typeof AudioContext })
-        .webkitAudioContext
-    if (!AudioContextClass) return
-    const context = new AudioContextClass()
-    const oscillator = context.createOscillator()
-    const gain = context.createGain()
-    oscillator.type = 'sine'
-    oscillator.frequency.setValueAtTime(880, context.currentTime)
-    oscillator.frequency.exponentialRampToValueAtTime(
-      1320,
-      context.currentTime + 0.14
-    )
-    gain.gain.setValueAtTime(0.0001, context.currentTime)
-    gain.gain.exponentialRampToValueAtTime(0.18, context.currentTime + 0.02)
-    gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + 0.5)
-    oscillator.connect(gain)
-    gain.connect(context.destination)
-    oscillator.start()
-    oscillator.stop(context.currentTime + 0.52)
-    oscillator.addEventListener('ended', () => void context.close())
-  } catch {
-    // Browsers may require a prior user gesture before permitting audio.
-  }
-}
 
 function OrderCard({
   order,
@@ -108,6 +78,11 @@ function OrderCard({
           {Number(order.total_amount).toLocaleString('ar-IQ')} د.ع
         </strong>
       </div>
+      {order.status === 'cancelled' && order.cancellation_reason && (
+        <p className='mt-3 rounded-lg bg-rose-50 px-3 py-2 text-xs leading-5 text-rose-700 dark:bg-rose-950/30 dark:text-rose-300'>
+          سبب الإلغاء: {order.cancellation_reason}
+        </p>
+      )}
       <div className='mt-3 flex items-center justify-between gap-2'>
         <time className='text-xs text-muted-foreground'>
           {new Date(order.created_at).toLocaleTimeString('ar-IQ', {
@@ -150,36 +125,6 @@ export function OrdersPage() {
   const [detailsOrder, setDetailsOrder] = useState<Order | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<Order | null>(null)
   const [archiveConfirmOpen, setArchiveConfirmOpen] = useState(false)
-
-  useEffect(() => {
-    if (!restaurantId) return
-    const channel = supabase
-      .channel('custom-insert-channel')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'orders',
-          filter: `restaurant_id=eq.${restaurantId}`,
-        },
-        () => {
-          playNotificationChime()
-          toast.success('وصل طلب جديد الآن.')
-          void queryClient.invalidateQueries({
-            queryKey: ['orders', restaurantId],
-          })
-          void queryClient.invalidateQueries({
-            queryKey: ['order-stats', restaurantId],
-          })
-        }
-      )
-      .subscribe()
-    return () => {
-      void supabase.removeChannel(channel)
-    }
-  }, [queryClient, restaurantId])
-
   const visibleOrders = useMemo(
     () =>
       filter === 'all'

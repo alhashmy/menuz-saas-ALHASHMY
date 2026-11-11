@@ -6,6 +6,15 @@ interface RecentSalesProps {
   orders: Order[]
 }
 
+const statusLabels: Record<Order['status'], string> = {
+  pending: 'قيد الانتظار',
+  confirmed: 'مؤكد',
+  preparing: 'قيد التحضير',
+  ready: 'جاهز',
+  completed: 'مكتمل',
+  cancelled: 'ملغي',
+}
+
 export function RecentSales({ orders }: RecentSalesProps) {
   if (orders.length === 0) {
     return (
@@ -47,7 +56,7 @@ export function RecentSales({ orders }: RecentSalesProps) {
                       : 'secondary'
                 }
               >
-                {order.status}
+                {statusLabels[order.status]}
               </Badge>
             </div>
           </div>

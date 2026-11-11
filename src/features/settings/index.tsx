@@ -1,5 +1,5 @@
 import { Outlet } from '@tanstack/react-router'
-import { UserCog, Wrench, Palette, Smartphone, Bell, Monitor } from 'lucide-react'
+import { Store } from 'lucide-react'
 import { Separator } from '@/components/ui/separator'
 import { ConfigDrawer } from '@/components/config-drawer'
 import { Header } from '@/components/layout/header'
@@ -11,34 +11,9 @@ import { SidebarNav } from './components/sidebar-nav'
 
 const sidebarNavItems = [
   {
-    title: 'الملف الشخصي',
+    title: 'إعدادات المطعم',
     href: '/settings',
-    icon: <UserCog size={18} />,
-  },
-  {
-    title: 'الحساب',
-    href: '/settings/account',
-    icon: <Wrench size={18} />,
-  },
-  {
-    title: 'المظهر',
-    href: '/settings/appearance',
-    icon: <Palette size={18} />,
-  },
-  {
-    title: 'إعدادات الطلبات',
-    href: '/settings/restaurant-ordering',
-    icon: <Smartphone size={18} />,
-  },
-  {
-    title: 'الإشعارات',
-    href: '/settings/notifications',
-    icon: <Bell size={18} />,
-  },
-  {
-    title: 'العرض',
-    href: '/settings/display',
-    icon: <Monitor size={18} />,
+    icon: <Store size={18} />,
   },
 ]
 
@@ -59,7 +34,7 @@ export function Settings() {
             الإعدادات
           </h1>
           <p className='text-muted-foreground'>
-            إدارة إعدادات الحساب وتفضيلات النظام.
+            إدارة بيانات المطعم، رابط المنيو، التشغيل والتوصيل.
           </p>
         </div>
         <Separator className='my-4 lg:my-6' />
