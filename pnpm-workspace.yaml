@@ -1,3 +1,7 @@
 allowBuilds:
   core-js: set this to true or false
   esbuild: false
+
+onlyBuiltDependencies:
+  - core-js
+  - esbuild
