@@ -1,4 +1,10 @@
-export type OrderStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'completed' | 'cancelled'
+export type OrderStatus =
+  | 'pending'
+  | 'confirmed'
+  | 'preparing'
+  | 'ready'
+  | 'completed'
+  | 'cancelled'
 
 export interface OrderItem {
   menu_item_id: string
@@ -19,6 +25,10 @@ export interface Order {
   discount_amount: number
   total_amount: number
   status: OrderStatus
+  daily_sequence: number
+  is_archived: boolean
+  delivery_zone_id: string | null
+  delivery_fee: number
   created_at: string
 }
 

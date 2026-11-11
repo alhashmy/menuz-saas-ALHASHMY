@@ -9,18 +9,25 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet'
 import { useRestaurantSettingsApi } from '@/features/orders/restaurant-settings-api'
+import { isRestaurantAcceptingOrders, type OperatingHours } from '../api'
 
 interface CartSheetProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   restaurantId?: string
+  restaurantIsOpen: boolean
+  operatingHours: OperatingHours[]
+  restaurantName: string
 }
 
 type CheckoutStep = 'items' | 'customer' | 'confirm'
 
 interface PublicOrderResult {
   id: string
+  daily_sequence: number
   total_amount: number
+  delivery_fee: number
+  delivery_zone_name: string | null
   items: Array<{
     name: string
     price: number
@@ -57,6 +64,9 @@ export function CartSheet({
   open,
   onOpenChange,
   restaurantId,
+  restaurantIsOpen,
+  operatingHours,
+  restaurantName,
 }: CartSheetProps) {
   const { items, removeItem, setQuantity, clear, itemCount } = useCartStore()
   const { fetchSettings } = useRestaurantSettingsApi()
@@ -74,6 +84,7 @@ export function CartSheet({
   const [whatsappNumber, setWhatsAppNumber] = useState<string | null>(null)
   const [deliveryZones, setDeliveryZones] = useState<DeliveryZone[]>([])
   const [deliveryZoneId, setDeliveryZoneId] = useState('')
+  const [now, setNow] = useState(() => new Date())
 
   const subtotal = useMemo(
     () => items.reduce((sum, item) => sum + item.price * item.quantity, 0),
@@ -86,7 +97,18 @@ export function CartSheet({
   const selectedZone = deliveryZones.find((zone) => zone.id === deliveryZoneId)
   const deliveryFee = selectedZone?.delivery_fee ?? 0
   const totalWithDelivery = subtotal + deliveryFee
-  const meetsZoneMinimum = !selectedZone || subtotal >= selectedZone.minimum_order
+  const meetsZoneMinimum =
+    !selectedZone || subtotal >= selectedZone.minimum_order
+  const isAcceptingOrders = isRestaurantAcceptingOrders(
+    restaurantIsOpen,
+    operatingHours,
+    now
+  )
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(new Date()), 30_000)
+    return () => window.clearInterval(timer)
+  }, [])
 
   useEffect(() => {
     if (!open || !restaurantId) return
@@ -109,7 +131,12 @@ export function CartSheet({
 
   useEffect(() => {
     if (!open || !restaurantId) return
-    void supabase.from('delivery_zones').select('id, name, delivery_fee, minimum_order').eq('restaurant_id', restaurantId).eq('is_active', true).order('sort_order')
+    void supabase
+      .from('delivery_zones')
+      .select('id, name, delivery_fee, minimum_order')
+      .eq('restaurant_id', restaurantId)
+      .eq('is_active', true)
+      .order('sort_order')
       .then(({ data }) => setDeliveryZones((data ?? []) as DeliveryZone[]))
   }, [open, restaurantId])
 
@@ -120,6 +147,10 @@ export function CartSheet({
 
   async function handleCheckout() {
     if (!restaurantId || !items.length || !customerValid) return
+    if (!isAcceptingOrders) {
+      toast.error('المطعم مغلق حاليًا أو خارج أوقات التشغيل.')
+      return
+    }
     setIsSubmitting(true)
 
     try {
@@ -137,20 +168,10 @@ export function CartSheet({
         })),
         p_delivery_zone_id: deliveryZoneId || null,
       }
-      let { data, error } = await supabase.rpc('create_public_order_with_delivery', orderPayload)
-      // يسمح استمرار استقبال الطلبات في المشاريع التي لم تطبق ترحيل 0005 بعد.
-      if (error?.code === 'PGRST202') {
-        const legacy = await supabase.rpc('create_public_order', {
-          p_restaurant_id: restaurantId,
-          p_customer_name: customerName,
-          p_customer_phone: customerPhone,
-          p_customer_address: customerAddress || null,
-          p_promo_code: promoCode.trim().slice(0, 64) || null,
-          p_items: items.map((item) => ({ item_id: item.id, quantity: item.quantity, notes: item.notes ?? null })),
-        })
-        data = legacy.data
-        error = legacy.error
-      }
+      const { data, error } = await supabase.rpc(
+        'create_public_order',
+        orderPayload
+      )
       if (error) throw error
 
       const order = data as PublicOrderResult
@@ -161,23 +182,25 @@ export function CartSheet({
             description: 'سيتواصل معك المطعم لتأكيده.',
           })
         } else {
+          const deliveryAreaName =
+            order.delivery_zone_name ??
+            selectedZone?.name ??
+            (customerAddress || 'غير محددة')
+          const confirmedDeliveryFee = Number(order.delivery_fee ?? deliveryFee)
           const message = [
-            'طلب جديد من المنيو الرقمي',
-            '',
-            `رقم الطلب: ${order.id.slice(0, 8)}`,
+            `طلب جديد من المنيو الرقمي (${restaurantName})`,
+            `رقم الطلب: ${order.daily_sequence}`,
             `الاسم: ${customerName}`,
             `الهاتف: ${customerPhone}`,
-            customerAddress ? `العنوان: ${customerAddress}` : '',
-            '',
+            `العنوان: (${deliveryAreaName})`,
+            '_____ الايتمات _____',
             ...order.items.map(
               (item) =>
-                `• ${item.name} × ${item.quantity} — ${Number(item.total).toLocaleString('ar-IQ')} د.ع`
+                `- ${item.name} × ${item.quantity} — ${Number(item.price).toLocaleString('ar-IQ')} د.ع`
             ),
-            '',
+            `- ${deliveryAreaName} توصيل ${confirmedDeliveryFee.toLocaleString('ar-IQ')}`,
             `الإجمالي: ${Number(order.total_amount).toLocaleString('ar-IQ')} د.ع`,
-          ]
-            .filter(Boolean)
-            .join('\n')
+          ].join('\n')
           const popup = window.open(
             `https://wa.me/${number}?text=${encodeURIComponent(message)}`,
             '_blank',
@@ -200,10 +223,22 @@ export function CartSheet({
       setPromoCode('')
       closeCart()
     } catch (error) {
+      const responseError = error as {
+        message?: string
+        details?: string
+        hint?: string
+      }
+      const message =
+        responseError?.message ||
+        responseError?.details ||
+        responseError?.hint ||
+        ''
       toast.error(
-        error instanceof Error
-          ? error.message
-          : 'تعذر إرسال الطلب. راجع الأصناف وحاول مرة أخرى.'
+        message.includes('مغلق')
+          ? 'المطعم مغلق حاليًا. يمكن تصفح المنيو لكن لا يمكن إرسال طلب.'
+          : message.includes('متوفر')
+            ? 'أحد الأطباق أصبح غير متوفر. احذفه من السلة ثم أعد المحاولة.'
+            : message || 'تعذر إرسال الطلب. تحقق من اتصالك ثم أعد المحاولة.'
       )
     } finally {
       setIsSubmitting(false)
@@ -356,7 +391,9 @@ export function CartSheet({
               <Button
                 type='button'
                 className='w-full py-5 font-bold'
-                disabled={!items.length || !meetsZoneMinimum}
+                disabled={
+                  !items.length || !meetsZoneMinimum || !isAcceptingOrders
+                }
                 onClick={() => setCheckoutStep('customer')}
               >
                 متابعة الطلب
@@ -364,7 +401,17 @@ export function CartSheet({
               <p className='mt-2 text-center text-[11px] text-muted-foreground'>
                 سيؤكّد المطعم السعر والتوفّر قبل اعتماد الطلب.
               </p>
-              {selectedZone && !meetsZoneMinimum && <p className='mt-2 text-center text-[11px] text-destructive'>الحد الأدنى لمنطقة {selectedZone.name}: {selectedZone.minimum_order.toLocaleString('ar-IQ')} د.ع</p>}
+              {!isAcceptingOrders && (
+                <p className='mt-2 text-center text-[11px] text-destructive'>
+                  المطعم لا يستقبل الطلبات حاليًا.
+                </p>
+              )}
+              {selectedZone && !meetsZoneMinimum && (
+                <p className='mt-2 text-center text-[11px] text-destructive'>
+                  الحد الأدنى لمنطقة {selectedZone.name}:{' '}
+                  {selectedZone.minimum_order.toLocaleString('ar-IQ')} د.ع
+                </p>
+              )}
             </div>
           </>
         )}
@@ -435,14 +482,30 @@ export function CartSheet({
                   placeholder='المنطقة، الشارع، أقرب نقطة دالة'
                 />
               </div>
-              {deliveryZones.length > 0 && <div className='space-y-2'>
-                <Label htmlFor='delivery-zone'>منطقة التوصيل</Label>
-                <select id='delivery-zone' value={deliveryZoneId} onChange={(event) => setDeliveryZoneId(event.target.value)} className='flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm'>
-                  <option value=''>اختر المنطقة</option>
-                  {deliveryZones.map((zone) => <option key={zone.id} value={zone.id}>{zone.name} — {zone.delivery_fee.toLocaleString('ar-IQ')} د.ع</option>)}
-                </select>
-                {selectedZone && <p className='text-xs text-muted-foreground'>سعر التوصيل: {deliveryFee.toLocaleString('ar-IQ')} د.ع</p>}
-              </div>}
+              {deliveryZones.length > 0 && (
+                <div className='space-y-2'>
+                  <Label htmlFor='delivery-zone'>منطقة التوصيل</Label>
+                  <select
+                    id='delivery-zone'
+                    value={deliveryZoneId}
+                    onChange={(event) => setDeliveryZoneId(event.target.value)}
+                    className='flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm'
+                  >
+                    <option value=''>اختر المنطقة</option>
+                    {deliveryZones.map((zone) => (
+                      <option key={zone.id} value={zone.id}>
+                        {zone.name} —{' '}
+                        {zone.delivery_fee.toLocaleString('ar-IQ')} د.ع
+                      </option>
+                    ))}
+                  </select>
+                  {selectedZone && (
+                    <p className='text-xs text-muted-foreground'>
+                      سعر التوصيل: {deliveryFee.toLocaleString('ar-IQ')} د.ع
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
             {!customerInfo.phone || validPhone(customerInfo.phone) ? null : (
               <p className='mt-3 text-xs text-destructive'>
@@ -452,7 +515,12 @@ export function CartSheet({
             <Button
               type='submit'
               className='mt-auto w-full py-5 font-bold'
-              disabled={!customerValid || !meetsZoneMinimum || (deliveryZones.length > 0 && !deliveryZoneId)}
+              disabled={
+                !customerValid ||
+                !meetsZoneMinimum ||
+                !isAcceptingOrders ||
+                (deliveryZones.length > 0 && !deliveryZoneId)
+              }
             >
               مراجعة الطلب
             </Button>
@@ -486,7 +554,12 @@ export function CartSheet({
               <span>الإجمالي المتوقع</span>
               <span>{totalWithDelivery.toLocaleString('ar-IQ')} د.ع</span>
             </div>
-            {selectedZone && <div className='mt-2 flex justify-between text-xs text-muted-foreground'><span>التوصيل إلى {selectedZone.name}</span><span>{deliveryFee.toLocaleString('ar-IQ')} د.ع</span></div>}
+            {selectedZone && (
+              <div className='mt-2 flex justify-between text-xs text-muted-foreground'>
+                <span>التوصيل إلى {selectedZone.name}</span>
+                <span>{deliveryFee.toLocaleString('ar-IQ')} د.ع</span>
+              </div>
+            )}
             {promoCode.trim() && (
               <p className='mt-2 text-xs text-muted-foreground'>
                 سيتم التحقق من كود «{promoCode.trim()}» عند الإرسال.
@@ -498,7 +571,7 @@ export function CartSheet({
             <Button
               type='button'
               className='mt-auto w-full py-5 font-bold'
-              disabled={isSubmitting || !items.length}
+              disabled={isSubmitting || !items.length || !isAcceptingOrders}
               onClick={handleCheckout}
             >
               {isSubmitting ? 'جارٍ إرسال الطلب…' : 'تأكيد وإرسال الطلب'}

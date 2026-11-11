@@ -32,6 +32,13 @@ export interface PublicRestaurant {
   waze_url: string | null
 }
 
+export interface OperatingHours {
+  day_of_week: number
+  is_open: boolean
+  opens_at: string | null
+  closes_at: string | null
+}
+
 export interface PublicBranding {
   primary_color: string
   accent_color: string
@@ -101,12 +108,83 @@ export interface PublicOrderOffer {
 
 export interface PublicMenuData {
   restaurant: PublicRestaurant
+  operatingHours: OperatingHours[]
   branding: PublicBranding | null
   categories: PublicMenuCategory[]
   /** خصومات على أصناف محددة، مفتاحها item_id لتسهيل الوصول السريع */
   itemOffers: Record<string, PublicItemOffer>
   /** أكواد برومو فعّالة على كامل الطلب */
   orderOffers: PublicOrderOffer[]
+}
+
+const baghdadWeekdays: Record<string, number> = {
+  Sun: 0,
+  Mon: 1,
+  Tue: 2,
+  Wed: 3,
+  Thu: 4,
+  Fri: 5,
+  Sat: 6,
+}
+
+function timeToMinutes(value: string | null) {
+  if (!value) return null
+  const [hours, minutes] = value.split(':').map(Number)
+  if (!Number.isInteger(hours) || !Number.isInteger(minutes)) return null
+  return hours * 60 + minutes
+}
+
+/** Mirrors `restaurant_is_accepting_orders` using Iraq local time for immediate UI feedback. */
+export function isRestaurantAcceptingOrders(
+  restaurantIsOpen: boolean,
+  operatingHours: OperatingHours[],
+  now = new Date()
+) {
+  if (!restaurantIsOpen) return false
+
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Baghdad',
+    weekday: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(now)
+  const part = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((item) => item.type === type)?.value
+  const day = baghdadWeekdays[part('weekday') ?? '']
+  const currentMinutes = Number(part('hour')) * 60 + Number(part('minute'))
+  if (day === undefined || !Number.isFinite(currentMinutes))
+    return restaurantIsOpen
+
+  const today = operatingHours.find((hours) => hours.day_of_week === day)
+  const yesterday = operatingHours.find(
+    (hours) => hours.day_of_week === (day + 6) % 7
+  )
+  const yesterdayOpens = timeToMinutes(yesterday?.opens_at ?? null)
+  const yesterdayCloses = timeToMinutes(yesterday?.closes_at ?? null)
+
+  // A shift that crosses midnight remains open until yesterday's closing time.
+  if (
+    yesterday?.is_open &&
+    yesterdayOpens !== null &&
+    yesterdayCloses !== null &&
+    yesterdayCloses <= yesterdayOpens &&
+    currentMinutes < yesterdayCloses
+  ) {
+    return true
+  }
+
+  // No entry means the manual `is_open` switch controls ordering for that day.
+  if (!today) return true
+  if (!today.is_open) return false
+
+  const opensAt = timeToMinutes(today.opens_at)
+  const closesAt = timeToMinutes(today.closes_at)
+  if (opensAt === null || closesAt === null) return false
+  if (closesAt > opensAt) {
+    return currentMinutes >= opensAt && currentMinutes < closesAt
+  }
+  return currentMinutes >= opensAt
 }
 
 /** يحسب السعر بعد الخصم لصنف معيّن إن وُجد عرض نشط عليه */
@@ -144,6 +222,7 @@ export function usePublicMenu(restaurantSlug: string) {
         { data: branding },
         { data: categories, error: categoriesError },
         { data: offers, error: offersError },
+        { data: operatingHours, error: operatingHoursError },
       ] = await Promise.all([
         supabase
           .from('restaurant_branding')
@@ -168,10 +247,15 @@ export function usePublicMenu(restaurantSlug: string) {
           )
           .eq('restaurant_id', restaurant.id)
           .eq('is_active', true),
+        supabase
+          .from('restaurant_operating_hours')
+          .select('day_of_week, is_open, opens_at, closes_at')
+          .eq('restaurant_id', restaurant.id),
       ])
 
       if (categoriesError) throw categoriesError
       if (offersError) throw offersError
+      if (operatingHoursError) throw operatingHoursError
 
       const itemOffers: Record<string, PublicItemOffer> = {}
       const orderOffers: PublicOrderOffer[] = []
@@ -224,6 +308,7 @@ export function usePublicMenu(restaurantSlug: string) {
 
       return {
         restaurant,
+        operatingHours: (operatingHours ?? []) as OperatingHours[],
         branding: branding ?? null,
         categories: normalizedCategories.filter((c) => c.items.length > 0),
         itemOffers,

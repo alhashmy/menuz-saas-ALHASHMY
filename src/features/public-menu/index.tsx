@@ -19,11 +19,11 @@ import { cn } from '@/lib/utils'
 import { Input } from '@/components/ui/input'
 import { type PublicMenuItem, usePublicMenu } from './api'
 import { CategoryTabsBar } from './components/category-tabs-bar'
+import { DeliveryAppMenu } from './components/delivery-app-menu'
 import { FloatingCart } from './components/floating-cart'
 import { ItemCard } from './components/item-card'
 import { ItemDetailsSheet } from './components/item-details-sheet'
 import { PromoBanner } from './components/promo-banner'
-import { DeliveryAppMenu } from './components/delivery-app-menu'
 import './public-menu.css'
 import { getMenuTemplate } from './templates/registry'
 
@@ -64,7 +64,8 @@ export function PublicMenu({ restaurantSlug }: PublicMenuProps) {
   const { items: cartItems, clear } = useCartStore()
 
   const builderStyle = data?.branding?.style
-  const storedTemplateId = builderStyle?.menuTemplate ?? data?.branding?.menu_style
+  const storedTemplateId =
+    builderStyle?.menuTemplate ?? data?.branding?.menu_style
   // نسخة دليفري القديمة حفظت عند بعض القوائم بخلفية سوداء رغم الوضع الفاتح.
   // نعرضها بالقالب البديل السليم كي لا يحصل تباين أسود على أسود عند الزبون.
   const isBrokenLegacyDelivery =
@@ -114,18 +115,24 @@ export function PublicMenu({ restaurantSlug }: PublicMenuProps) {
   useEffect(() => {
     if (template.id === 'modern' || !data?.categories.length) return
     const observers = data.categories
-      .map((category) => document.getElementById('menu-category-' + category.id))
+      .map((category) =>
+        document.getElementById('menu-category-' + category.id)
+      )
       .filter((element): element is HTMLElement => Boolean(element))
-      .map((element) =>
-        new IntersectionObserver(
-          ([entry]) => {
-            if (entry?.isIntersecting) setActiveCategoryId(element.id.replace('menu-category-', ''))
-          },
-          { rootMargin: '-22% 0px -62% 0px', threshold: 0 }
-        )
+      .map(
+        (element) =>
+          new IntersectionObserver(
+            ([entry]) => {
+              if (entry?.isIntersecting)
+                setActiveCategoryId(element.id.replace('menu-category-', ''))
+            },
+            { rootMargin: '-22% 0px -62% 0px', threshold: 0 }
+          )
       )
     const elements = data.categories
-      .map((category) => document.getElementById('menu-category-' + category.id))
+      .map((category) =>
+        document.getElementById('menu-category-' + category.id)
+      )
       .filter((element): element is HTMLElement => Boolean(element))
     observers.forEach((observer, index) => observer.observe(elements[index]))
     return () => observers.forEach((observer) => observer.disconnect())
@@ -162,7 +169,7 @@ export function PublicMenu({ restaurantSlug }: PublicMenuProps) {
     : (categories[0]?.id ?? '')
   const isModernMenu = template.id === 'modern'
   const selectedModernCategory = isModernMenu
-    ? categories.find((category) => category.id === modernCategoryId) ?? null
+    ? (categories.find((category) => category.id === modernCategoryId) ?? null)
     : null
 
   function selectCategory(categoryId: string) {
@@ -227,12 +234,69 @@ export function PublicMenu({ restaurantSlug }: PublicMenuProps) {
         ? 'grid gap-4 sm:grid-cols-2'
         : 'grid gap-3'
   const socialRail = (
-    <aside className='public-menu__social-rail' aria-label='وسائل التواصل والموقع'>
-      {mapUrl && <a href={mapUrl} target='_blank' rel='noopener noreferrer' aria-label='موقع المطعم'><MapPin /></a>}
-      {builderStyle?.socialVisibility?.whatsapp && builderStyle.socialLinks?.whatsapp && <a href={builderStyle.socialLinks.whatsapp.startsWith('http') ? builderStyle.socialLinks.whatsapp : 'https://wa.me/' + builderStyle.socialLinks.whatsapp.replace(/\D/g, '')} target='_blank' rel='noopener noreferrer' aria-label='واتساب'><MessageCircle /></a>}
-      {builderStyle?.socialVisibility?.instagram && builderStyle.socialLinks?.instagram && <a href={builderStyle.socialLinks.instagram} target='_blank' rel='noopener noreferrer' aria-label='إنستغرام'><AtSign /></a>}
-      {builderStyle?.socialVisibility?.facebook && builderStyle.socialLinks?.facebook && <a href={builderStyle.socialLinks.facebook} target='_blank' rel='noopener noreferrer' aria-label='فيسبوك'><Share2 /></a>}
-      {builderStyle?.socialVisibility?.tiktok && builderStyle.socialLinks?.tiktok && <a href={builderStyle.socialLinks.tiktok} target='_blank' rel='noopener noreferrer' aria-label='تيك توك'><Music2 /></a>}
+    <aside
+      className='public-menu__social-rail'
+      aria-label='وسائل التواصل والموقع'
+    >
+      {mapUrl && (
+        <a
+          href={mapUrl}
+          target='_blank'
+          rel='noopener noreferrer'
+          aria-label='موقع المطعم'
+        >
+          <MapPin />
+        </a>
+      )}
+      {builderStyle?.socialVisibility?.whatsapp &&
+        builderStyle.socialLinks?.whatsapp && (
+          <a
+            href={
+              builderStyle.socialLinks.whatsapp.startsWith('http')
+                ? builderStyle.socialLinks.whatsapp
+                : 'https://wa.me/' +
+                  builderStyle.socialLinks.whatsapp.replace(/\D/g, '')
+            }
+            target='_blank'
+            rel='noopener noreferrer'
+            aria-label='واتساب'
+          >
+            <MessageCircle />
+          </a>
+        )}
+      {builderStyle?.socialVisibility?.instagram &&
+        builderStyle.socialLinks?.instagram && (
+          <a
+            href={builderStyle.socialLinks.instagram}
+            target='_blank'
+            rel='noopener noreferrer'
+            aria-label='إنستغرام'
+          >
+            <AtSign />
+          </a>
+        )}
+      {builderStyle?.socialVisibility?.facebook &&
+        builderStyle.socialLinks?.facebook && (
+          <a
+            href={builderStyle.socialLinks.facebook}
+            target='_blank'
+            rel='noopener noreferrer'
+            aria-label='فيسبوك'
+          >
+            <Share2 />
+          </a>
+        )}
+      {builderStyle?.socialVisibility?.tiktok &&
+        builderStyle.socialLinks?.tiktok && (
+          <a
+            href={builderStyle.socialLinks.tiktok}
+            target='_blank'
+            rel='noopener noreferrer'
+            aria-label='تيك توك'
+          >
+            <Music2 />
+          </a>
+        )}
     </aside>
   )
 
@@ -255,24 +319,59 @@ export function PublicMenu({ restaurantSlug }: PublicMenuProps) {
           accentColor={accentColor}
           onSelectItem={setSelectedItem}
           onOpenCart={() => setCartOpen(true)}
+          socialRail={socialRail}
         />
-        {socialRail}
         {builderStyle?.neonLineEnabled && (
           <>
-            <div className='public-menu__neon-line public-menu__neon-line--top' aria-hidden='true' />
-            <div className='public-menu__neon-line public-menu__neon-line--bottom' aria-hidden='true' />
+            <div
+              className='public-menu__neon-line public-menu__neon-line--top'
+              aria-hidden='true'
+            />
+            <div
+              className='public-menu__neon-line public-menu__neon-line--bottom'
+              aria-hidden='true'
+            />
           </>
         )}
         {builderStyle?.entryAdEnabled && entryAdOpen && (
-          <div className='entry-ad' role='dialog' aria-modal='true' aria-label='إعلان'>
-            <button type='button' className='entry-ad__backdrop' onClick={() => setEntryAdOpen(false)} aria-label='إغلاق الإعلان' />
+          <div
+            className='entry-ad'
+            role='dialog'
+            aria-modal='true'
+            aria-label='إعلان'
+          >
+            <button
+              type='button'
+              className='entry-ad__backdrop'
+              onClick={() => setEntryAdOpen(false)}
+              aria-label='إغلاق الإعلان'
+            />
             <section className='entry-ad__card'>
-              <button type='button' className='entry-ad__close' onClick={() => setEntryAdOpen(false)} aria-label='إغلاق'>×</button>
-              {builderStyle.entryAdImageUrl && <img src={builderStyle.entryAdImageUrl} alt='' className='entry-ad__image' />}
+              <button
+                type='button'
+                className='entry-ad__close'
+                onClick={() => setEntryAdOpen(false)}
+                aria-label='إغلاق'
+              >
+                ×
+              </button>
+              {builderStyle.entryAdImageUrl && (
+                <img
+                  src={builderStyle.entryAdImageUrl}
+                  alt=''
+                  className='entry-ad__image'
+                />
+              )}
               <div className='entry-ad__body'>
-                {builderStyle.entryAdTitle && <h2>{builderStyle.entryAdTitle}</h2>}
-                {builderStyle.entryAdMessage && <p>{builderStyle.entryAdMessage}</p>}
-                <button type='button' onClick={() => setEntryAdOpen(false)}>إغلاق</button>
+                {builderStyle.entryAdTitle && (
+                  <h2>{builderStyle.entryAdTitle}</h2>
+                )}
+                {builderStyle.entryAdMessage && (
+                  <p>{builderStyle.entryAdMessage}</p>
+                )}
+                <button type='button' onClick={() => setEntryAdOpen(false)}>
+                  إغلاق
+                </button>
               </div>
             </section>
           </div>
@@ -282,9 +381,13 @@ export function PublicMenu({ restaurantSlug }: PublicMenuProps) {
           item={selectedItem}
           accentColor={accentColor}
           offer={selectedItem ? data.itemOffers[selectedItem.id] : undefined}
-          isAvailable={Boolean(selectedItem?.is_available && restaurant.is_open)}
+          isAvailable={Boolean(
+            selectedItem?.is_available && restaurant.is_open
+          )}
           themeMode='light'
-          onOpenChange={(open) => { if (!open) setSelectedItem(null) }}
+          onOpenChange={(open) => {
+            if (!open) setSelectedItem(null)
+          }}
         />
         <FloatingCart
           accentColor={accentColor}
@@ -293,6 +396,9 @@ export function PublicMenu({ restaurantSlug }: PublicMenuProps) {
           onOpenChange={setCartOpen}
           cartCount={cartCount}
           restaurantId={restaurant.id}
+          restaurantIsOpen={restaurant.is_open}
+          operatingHours={data.operatingHours}
+          restaurantName={restaurantName}
         />
       </div>
     )
@@ -417,10 +523,17 @@ export function PublicMenu({ restaurantSlug }: PublicMenuProps) {
           )}
         </div>
       </header>
+      {socialRail}
       {builderStyle?.neonLineEnabled && (
         <>
-          <div className='public-menu__neon-line public-menu__neon-line--top' aria-hidden='true' />
-          <div className='public-menu__neon-line public-menu__neon-line--bottom' aria-hidden='true' />
+          <div
+            className='public-menu__neon-line public-menu__neon-line--top'
+            aria-hidden='true'
+          />
+          <div
+            className='public-menu__neon-line public-menu__neon-line--bottom'
+            aria-hidden='true'
+          />
         </>
       )}
 
@@ -464,7 +577,9 @@ export function PublicMenu({ restaurantSlug }: PublicMenuProps) {
             <p>اختر القسم الذي تريد الطلب منه</p>
             <div className='modern-menu__categories'>
               {categories.map((category) => {
-                const cover = category.items.find((item) => item.image_path)?.image_path
+                const cover = category.items.find(
+                  (item) => item.image_path
+                )?.image_path
                 return (
                   <button
                     key={category.id}
@@ -475,11 +590,18 @@ export function PublicMenu({ restaurantSlug }: PublicMenuProps) {
                       window.scrollTo({ top: 0, behavior: 'smooth' })
                     }}
                   >
-                    {cover ? <img src={menuImageUrl(cover) ?? undefined} alt='' /> : <UtensilsCrossed className='size-8' />}
+                    {cover ? (
+                      <img src={menuImageUrl(cover) ?? undefined} alt='' />
+                    ) : (
+                      <UtensilsCrossed className='size-8' />
+                    )}
                     <span className='modern-menu__category-shade' />
                     <span className='modern-menu__category-copy'>
                       <strong>{category.name_ar ?? category.name}</strong>
-                      <small>{category.items.length} {category.items.length === 1 ? 'صنف' : 'أصناف'}</small>
+                      <small>
+                        {category.items.length}{' '}
+                        {category.items.length === 1 ? 'صنف' : 'أصناف'}
+                      </small>
                     </span>
                   </button>
                 )
@@ -488,7 +610,10 @@ export function PublicMenu({ restaurantSlug }: PublicMenuProps) {
           </div>
         ) : (
           <div className='space-y-10'>
-            {(selectedModernCategory ? [selectedModernCategory] : categories).map((category, categoryIndex) => (
+            {(selectedModernCategory
+              ? [selectedModernCategory]
+              : categories
+            ).map((category, categoryIndex) => (
               <section
                 key={category.id}
                 id={`menu-category-${category.id}`}
@@ -539,18 +664,46 @@ export function PublicMenu({ restaurantSlug }: PublicMenuProps) {
         <span>طلبك يُراجع مباشرة من المطعم</span>
         <Sparkles className='size-3.5' />
       </footer>
-      {socialRail}
 
       {builderStyle?.entryAdEnabled && entryAdOpen && (
-        <div className='entry-ad' role='dialog' aria-modal='true' aria-label='إعلان'>
-          <button type='button' className='entry-ad__backdrop' onClick={() => setEntryAdOpen(false)} aria-label='إغلاق الإعلان' />
+        <div
+          className='entry-ad'
+          role='dialog'
+          aria-modal='true'
+          aria-label='إعلان'
+        >
+          <button
+            type='button'
+            className='entry-ad__backdrop'
+            onClick={() => setEntryAdOpen(false)}
+            aria-label='إغلاق الإعلان'
+          />
           <section className='entry-ad__card'>
-            <button type='button' className='entry-ad__close' onClick={() => setEntryAdOpen(false)} aria-label='إغلاق'>×</button>
-            {builderStyle.entryAdImageUrl && <img src={builderStyle.entryAdImageUrl} alt='' className='entry-ad__image' />}
+            <button
+              type='button'
+              className='entry-ad__close'
+              onClick={() => setEntryAdOpen(false)}
+              aria-label='إغلاق'
+            >
+              ×
+            </button>
+            {builderStyle.entryAdImageUrl && (
+              <img
+                src={builderStyle.entryAdImageUrl}
+                alt=''
+                className='entry-ad__image'
+              />
+            )}
             <div className='entry-ad__body'>
-              {builderStyle.entryAdTitle && <h2>{builderStyle.entryAdTitle}</h2>}
-              {builderStyle.entryAdMessage && <p>{builderStyle.entryAdMessage}</p>}
-              <button type='button' onClick={() => setEntryAdOpen(false)}>إغلاق</button>
+              {builderStyle.entryAdTitle && (
+                <h2>{builderStyle.entryAdTitle}</h2>
+              )}
+              {builderStyle.entryAdMessage && (
+                <p>{builderStyle.entryAdMessage}</p>
+              )}
+              <button type='button' onClick={() => setEntryAdOpen(false)}>
+                إغلاق
+              </button>
             </div>
           </section>
         </div>
@@ -574,6 +727,9 @@ export function PublicMenu({ restaurantSlug }: PublicMenuProps) {
         onOpenChange={setCartOpen}
         cartCount={cartCount}
         restaurantId={restaurant.id}
+        restaurantIsOpen={restaurant.is_open}
+        operatingHours={data.operatingHours}
+        restaurantName={restaurantName}
       />
     </div>
   )

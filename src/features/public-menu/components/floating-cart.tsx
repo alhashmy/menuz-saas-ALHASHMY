@@ -1,8 +1,9 @@
 'use client'
 
 import { ChevronRight } from 'lucide-react'
-import { cn } from '@/lib/utils'
 import { useCartStore } from '@/stores/cart-store'
+import { cn } from '@/lib/utils'
+import type { OperatingHours } from '../api'
 import { CartSheet } from './cart-sheet'
 
 interface FloatingCartProps {
@@ -12,6 +13,9 @@ interface FloatingCartProps {
   onOpenChange: (open: boolean) => void
   cartCount: number
   restaurantId?: string
+  restaurantIsOpen: boolean
+  operatingHours: OperatingHours[]
+  restaurantName: string
 }
 
 export function FloatingCart({
@@ -21,6 +25,9 @@ export function FloatingCart({
   onOpenChange,
   cartCount,
   restaurantId,
+  restaurantIsOpen,
+  operatingHours,
+  restaurantName,
 }: FloatingCartProps) {
   const { items } = useCartStore()
   if (items.length === 0) return null
@@ -40,11 +47,14 @@ export function FloatingCart({
         open={open}
         onOpenChange={onOpenChange}
         restaurantId={restaurantId}
+        restaurantIsOpen={restaurantIsOpen}
+        operatingHours={operatingHours}
+        restaurantName={restaurantName}
       />
       <button
         type='button'
         className={cn(
-          'fixed bottom-4 inset-x-4 max-w-md mx-auto z-40 rounded-2xl p-3.5 shadow-2xl flex items-center justify-between',
+          'fixed inset-x-4 bottom-4 z-40 mx-auto flex max-w-md items-center justify-between rounded-2xl p-3.5 shadow-2xl',
           textColor
         )}
         style={{ backgroundColor: accentColor }}
@@ -53,18 +63,24 @@ export function FloatingCart({
       >
         {/* اليمين: عدد الوجبات داخل دائرة + النص */}
         <div className='flex items-center gap-2'>
-          <div className={cn(
-            'flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold',
-            countBg,
-            countText
-          )}>
+          <div
+            className={cn(
+              'flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold',
+              countBg,
+              countText
+            )}
+          >
             {cartCount}
           </div>
-          <span className={cn('font-medium text-sm', textColor)}>عرض السلة وإتمام الطلب</span>
+          <span className={cn('text-sm font-medium', textColor)}>
+            عرض السلة وإتمام الطلب
+          </span>
         </div>
         {/* اليسار: المجموع الكلي مع سهم */}
         <div className='flex items-center gap-2'>
-          <span className={cn('font-bold', textColor)}>{total.toLocaleString('ar-IQ')} د.ع</span>
+          <span className={cn('font-bold', textColor)}>
+            {total.toLocaleString('ar-IQ')} د.ع
+          </span>
           <ChevronRight className={cn('size-4 rtl:rotate-180', textColor)} />
         </div>
       </button>

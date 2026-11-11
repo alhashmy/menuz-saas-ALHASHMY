@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/stores/auth-store'
+import { supabase } from '@/lib/supabase'
 import type { Order, OrderStats, CreateOrderInput, OrderStatus } from './types'
 
 export function useOrders(restaurantId: string | null) {
@@ -12,6 +12,7 @@ export function useOrders(restaurantId: string | null) {
         .from('orders')
         .select('*')
         .eq('restaurant_id', restaurantId!)
+        .eq('is_archived', false)
         .order('created_at', { ascending: false })
       if (error) throw error
       return (data ?? []).map((row) => ({
@@ -25,8 +26,60 @@ export function useOrders(restaurantId: string | null) {
         discount_amount: row.discount_amount,
         total_amount: row.total_amount,
         status: row.status,
+        daily_sequence: row.daily_sequence,
+        is_archived: row.is_archived,
+        delivery_zone_id: row.delivery_zone_id,
+        delivery_fee: row.delivery_fee,
         created_at: row.created_at,
       }))
+    },
+  })
+}
+
+export function useArchiveTodayOrders() {
+  const queryClient = useQueryClient()
+  const restaurantId = useAuthStore((s) => s.restaurant?.id)
+
+  return useMutation({
+    mutationFn: async () => {
+      if (!restaurantId) throw new Error('لا يوجد مطعم مرتبط بالحساب الحالي.')
+      const { error } = await supabase.rpc('archive_todays_orders', {
+        p_restaurant_id: restaurantId,
+      })
+      if (error) throw error
+    },
+    onSuccess: () => {
+      if (restaurantId) {
+        queryClient.invalidateQueries({ queryKey: ['orders', restaurantId] })
+        queryClient.invalidateQueries({
+          queryKey: ['order-stats', restaurantId],
+        })
+      }
+    },
+  })
+}
+
+export function useDeleteOrder() {
+  const queryClient = useQueryClient()
+  const restaurantId = useAuthStore((s) => s.restaurant?.id)
+
+  return useMutation({
+    mutationFn: async (orderId: string) => {
+      if (!restaurantId) throw new Error('لا يوجد مطعم مرتبط بالحساب الحالي.')
+      const { error } = await supabase
+        .from('orders')
+        .delete()
+        .eq('id', orderId)
+        .eq('restaurant_id', restaurantId)
+      if (error) throw error
+    },
+    onSuccess: () => {
+      if (restaurantId) {
+        queryClient.invalidateQueries({ queryKey: ['orders', restaurantId] })
+        queryClient.invalidateQueries({
+          queryKey: ['order-stats', restaurantId],
+        })
+      }
     },
   })
 }
@@ -49,7 +102,9 @@ export function useOrderStats(restaurantId: string | null) {
         0
       )
       const totalItems = orders.reduce(
-        (sum, o) => sum + (o.items ?? []).reduce((s, i) => s + (Number(i.quantity) || 0), 0),
+        (sum, o) =>
+          sum +
+          (o.items ?? []).reduce((s, i) => s + (Number(i.quantity) || 0), 0),
         0
       )
 
@@ -70,12 +125,26 @@ export function useOrderStats(restaurantId: string | null) {
       for (let i = 11; i >= 0; i--) {
         const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
         const monthKey = d.toISOString().slice(0, 7)
-        const monthOrders = orders.filter((o) => o.created_at.slice(0, 7) === monthKey)
-        const revenue = monthOrders.reduce((sum, o) => sum + Number(o.total_amount || 0), 0)
-        monthlyRevenue.push({ month: d.toLocaleString('ar-SA', { month: 'short' }), revenue })
+        const monthOrders = orders.filter(
+          (o) => o.created_at.slice(0, 7) === monthKey
+        )
+        const revenue = monthOrders.reduce(
+          (sum, o) => sum + Number(o.total_amount || 0),
+          0
+        )
+        monthlyRevenue.push({
+          month: d.toLocaleString('ar-SA', { month: 'short' }),
+          revenue,
+        })
       }
 
-      return { totalOrders, totalRevenue, totalItems, ordersByStatus, monthlyRevenue }
+      return {
+        totalOrders,
+        totalRevenue,
+        totalItems,
+        ordersByStatus,
+        monthlyRevenue,
+      }
     },
   })
 }
@@ -98,7 +167,9 @@ export function useUpdateOrderStatus() {
     onSuccess: () => {
       if (restaurantId) {
         queryClient.invalidateQueries({ queryKey: ['orders', restaurantId] })
-        queryClient.invalidateQueries({ queryKey: ['order-stats', restaurantId] })
+        queryClient.invalidateQueries({
+          queryKey: ['order-stats', restaurantId],
+        })
       }
     },
   })
@@ -132,7 +203,9 @@ export function useCreateOrder() {
     onSuccess: () => {
       if (restaurantId) {
         queryClient.invalidateQueries({ queryKey: ['orders', restaurantId] })
-        queryClient.invalidateQueries({ queryKey: ['order-stats', restaurantId] })
+        queryClient.invalidateQueries({
+          queryKey: ['order-stats', restaurantId],
+        })
       }
     },
   })

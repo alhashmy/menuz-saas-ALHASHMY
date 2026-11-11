@@ -21,6 +21,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 /** يبني رابط صورة عام من مسار داخل bucket menu-images */
 export function getMenuImageUrl(path: string | null | undefined): string | null {
   if (!path) return null
+  if (path.startsWith('https://') || path.startsWith('http://')) return path
   const { data } = supabase.storage.from('menu-images').getPublicUrl(path)
   return data.publicUrl
 }

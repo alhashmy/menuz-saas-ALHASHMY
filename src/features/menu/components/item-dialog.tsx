@@ -5,6 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { Loader2, Upload } from 'lucide-react'
 import { toast } from 'sonner'
 import { getMenuImageUrl, uploadMenuImage } from '@/lib/supabase'
+import { cropMenuItemImage } from '@/lib/image-crop'
 import { useAuthStore } from '@/stores/auth-store'
 import { Button } from '@/components/ui/button'
 import {
@@ -97,7 +98,8 @@ export function ItemDialog({
     try {
       let finalImageUrl = imagePath
       if (imageFile && restaurantId) {
-        const uploadedPath = await uploadMenuImage(restaurantId, 'items', imageFile)
+        const croppedImage = await cropMenuItemImage(imageFile)
+        const uploadedPath = await uploadMenuImage(restaurantId, 'items', croppedImage)
         const SUPABASE_PROJECT_URL = 'https://fcwxelswjoiwndlzqhys.supabase.co'
         finalImageUrl = `${SUPABASE_PROJECT_URL}/storage/v1/object/public/menu-images/${uploadedPath}`
       }
@@ -222,6 +224,7 @@ export function ItemDialog({
                   />
                 </label>
               </div>
+              <p className='text-xs leading-5 text-muted-foreground'>تُقص الصورة تلقائيًا بنسبة 4:3 قبل الرفع حتى تظهر كل الأطباق بشكل متناسق.</p>
             </div>
 
             <DialogFooter>

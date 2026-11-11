@@ -1,7 +1,8 @@
-import { useCallback, useState } from 'react'
-import { Loader2, Pencil, Plus, Trash2, Edit, Settings } from 'lucide-react'
+import { useCallback, useState, type ReactNode } from 'react'
+import { Loader2, Pencil, Plus, Trash2, Edit, Settings, GripVertical } from 'lucide-react'
 import { toast } from 'sonner'
-import { supabase } from '@/lib/supabase'
+import { getMenuImageUrl, supabase, uploadMenuImage } from '@/lib/supabase'
+import { cropMenuItemImage } from '@/lib/image-crop'
 import { cn } from '@/lib/utils'
 import { useQueryClient } from '@tanstack/react-query'
 import { useAuthStore } from '@/stores/auth-store'
@@ -33,6 +34,7 @@ import {
   useMenuItems,
   useToggleItemAvailability,
   useUpdateSortOrder,
+  useUpdateCategorySortOrder,
   useUpsertMenuItem,
 } from './api'
 import { CategoryDialog } from './components/category-dialog'
@@ -105,7 +107,7 @@ function SortableItem({
           </div>
           <div className='relative shrink-0 overflow-hidden rounded-md border border-muted/40'>
             <img
-              src={item.image_path || 'رابط_صورة_افتراضية_أو_فارغ'}
+              src={getMenuImageUrl(item.image_path) || 'رابط_صورة_افتراضية_أو_فارغ'}
               alt={item.name}
               className='size-10 object-cover object-center'
             />
@@ -259,6 +261,14 @@ function CategoryItems({
   return <>{reorderUI}</>
 }
 
+function SortableCategoryContainer({ id, enabled, children }: { id: string; enabled: boolean; children: ReactNode }) {
+  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id })
+  return <div ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition }} {...attributes} className={enabled ? 'relative' : ''}>
+    {enabled && <button type='button' {...listeners} className='absolute right-2 top-3 z-10 cursor-grab rounded-md p-1 text-muted-foreground hover:bg-muted active:cursor-grabbing' aria-label='اسحب لتغيير ترتيب القسم'><GripVertical className='size-4' /></button>}
+    {children}
+  </div>
+}
+
 function EditItemDialog({
   open,
   onOpenChange,
@@ -289,23 +299,10 @@ function EditItemDialog({
           }
         }
 
-        // 1. توليد اسم إنجليزي عشوائي وآمن إجبارياً لمنع أخطاء الأسماء العربية
-        const fileExt = imageFile.name.split('.').pop();
-        const safeFileName = `img_${Date.now()}_${Math.random().toString(36).substring(2, 9)}.${fileExt}`;
-        
-        // 2. الرفع إلى Supabase
-        const { error: uploadError } = await supabase.storage
-          .from('menu-images')
-          .upload(safeFileName, imageFile);
-          
-        if (uploadError) {
-          alert("فشل الرفع إلى الخادم: " + uploadError.message); // تنبيه للمستخدم
-          return;
-        }
-
-        // 3. بناء الرابط الكامل (Absolute URL) يدوياً لمنع أخطاء المتصفح
-        const SUPABASE_PROJECT_URL = 'https://fcwxelswjoiwndlzqhys.supabase.co';
-        finalImageUrl = `${SUPABASE_PROJECT_URL}/storage/v1/object/public/menu-images/${safeFileName}`;
+        if (!restaurantId) throw new Error('لا يوجد مطعم مرتبط بالحساب الحالي.')
+        const croppedImage = await cropMenuItemImage(imageFile)
+        const uploadedPath = await uploadMenuImage(restaurantId, 'items', croppedImage)
+        finalImageUrl = getMenuImageUrl(uploadedPath) ?? uploadedPath
       }
 
       // 4. تحديث قاعدة البيانات
@@ -421,6 +418,7 @@ export function MenuManagement() {
   const deleteCategory = useDeleteCategory()
   const deleteItem = useDeleteMenuItem()
   const updateSortOrder = useUpdateSortOrder()
+  const updateCategorySortOrder = useUpdateCategorySortOrder()
 
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false)
   const [editingCategory, setEditingCategory] = useState<MenuCategory | null>(
@@ -470,6 +468,19 @@ export function MenuManagement() {
     []
   )
 
+  function handleCategoryDragEnd(event: DragEndEvent) {
+    const { active, over } = event
+    if (!over || active.id === over.id) return
+    const from = categories.findIndex((category) => category.id === active.id)
+    const to = categories.findIndex((category) => category.id === over.id)
+    if (from < 0 || to < 0) return
+    const ordered = arrayMove(categories, from, to)
+    updateCategorySortOrder.mutate(ordered.map((category, sort_order) => ({ id: category.id, sort_order })), {
+      onError: () => toast.error('تعذّر حفظ ترتيب الأقسام.'),
+      onSuccess: () => toast.success('تم نقل القسم مع محتواه.'),
+    })
+  }
+
   return (
     <>
       <Header>
@@ -482,9 +493,9 @@ export function MenuManagement() {
       <Main>
         <div className='mb-6 flex flex-wrap items-center justify-between gap-4'>
           <div>
-            <h1 className='text-2xl font-bold tracking-tight'>إدارة القائمة</h1>
+            <h1 className='text-2xl font-bold tracking-tight'>إدارة الأطباق</h1>
             <p className='text-muted-foreground'>
-              الأقسام، الوجبات، الأسعار، وحالة التوفر.
+              الأقسام، الأطباق، الأسعار، والتوفر — مع ترتيب مرن للمحتوى بالكامل.
             </p>
           </div>
           <div className='flex gap-2 items-center'>
@@ -540,14 +551,17 @@ export function MenuManagement() {
             لا توجد أقسام بعد. ابدأ بإضافة أول قسم لقائمتك.
           </div>
         ) : (
-          <div className='space-y-8'>
+          <DndContext sensors={sensors} onDragEnd={handleCategoryDragEnd}>
+          <SortableContext items={categories.map((category) => category.id)}>
+          <div className='space-y-5'>
             {categories.map((category) => {
               const categoryItems = allItems.filter(
                 (item) => item.category_id === category.id
               )
               return (
-                <div key={category.id} className='rounded-lg border'>
-                  <div className='flex items-center justify-between border-b bg-muted/30 px-4 py-3'>
+                <SortableCategoryContainer key={category.id} id={category.id} enabled={isReorderMode}>
+                <div className='overflow-hidden rounded-xl border bg-card shadow-sm'>
+                  <div className='flex items-center justify-between border-b bg-muted/30 px-4 py-3 pr-9'>
                     <div className='flex items-center gap-2'>
                       <h2 className='font-semibold'>
                         {category.name_ar ?? category.name}
@@ -594,9 +608,12 @@ export function MenuManagement() {
                     isReorderMode={isReorderMode}
                   />
                 </div>
+                </SortableCategoryContainer>
               )
             })}
           </div>
+          </SortableContext>
+          </DndContext>
         )}
       </Main>
 

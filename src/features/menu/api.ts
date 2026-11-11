@@ -201,3 +201,18 @@ export function useUpdateSortOrder() {
     },
   })
 }
+
+export function useUpdateCategorySortOrder() {
+  const queryClient = useQueryClient()
+  const restaurantId = useAuthStore((s) => s.restaurant?.id)
+  return useMutation({
+    mutationFn: async (updates: { id: string; sort_order: number }[]) => {
+      if (!restaurantId) throw new Error('لا يوجد مطعم مرتبط بالحساب الحالي.')
+      for (const { id, sort_order } of updates) {
+        const { error } = await supabase.from('menu_categories').update({ sort_order }).eq('id', id)
+        if (error) throw error
+      }
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['menu-categories', restaurantId] }),
+  })
+}

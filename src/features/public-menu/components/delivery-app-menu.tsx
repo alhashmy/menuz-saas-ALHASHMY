@@ -1,4 +1,4 @@
-import { useMemo, useState, type CSSProperties } from 'react'
+import { useMemo, useState, type CSSProperties, type ReactNode } from 'react'
 import { ChevronLeft, Menu, Search, ShoppingBag, UtensilsCrossed } from 'lucide-react'
 import { getMenuImageUrl } from '@/lib/supabase'
 import { useCartStore } from '@/stores/cart-store'
@@ -22,6 +22,7 @@ interface DeliveryAppMenuProps {
   accentColor: string
   onSelectItem: (item: PublicMenuItem) => void
   onOpenCart: () => void
+  socialRail?: ReactNode
 }
 
 function imageUrl(path: string | null | undefined) {
@@ -46,6 +47,7 @@ export function DeliveryAppMenu({
   accentColor,
   onSelectItem,
   onOpenCart,
+  socialRail,
 }: DeliveryAppMenuProps) {
   const [activeCategoryId, setActiveCategoryId] = useState(categories[0]?.id ?? '')
   const { addItem, items } = useCartStore()
@@ -87,6 +89,7 @@ export function DeliveryAppMenu({
           {restaurant.is_open ? 'مفتوح' : 'مغلق'}
         </span>
       </section>
+      {socialRail}
 
       <nav className='delivery-app-menu__categories' aria-label='أقسام المنيو'>
         <button type='button' className={!activeCategoryId ? 'is-active' : ''} onClick={() => setActiveCategoryId(categories[0]?.id ?? '')}>

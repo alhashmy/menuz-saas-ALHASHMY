@@ -621,9 +621,14 @@ export function FloatingToolbar({ embedded = false }: FloatingToolbarProps) {
                         const file = e.target.files?.[0]
                         if (!file || !restaurantId) return
                         void uploadMenuImage(restaurantId, 'branding', file)
-                          .then((path) => {
+                          .then(async (path) => {
+                            const { error } = await supabase
+                              .from('restaurant_branding')
+                              .upsert({ restaurant_id: restaurantId, logo_path: path }, { onConflict: 'restaurant_id' })
+                            if (error) throw error
                             const url = getMenuImageUrl(path)
                             setRestaurantLogoUrl(url)
+                            toast.success('تم تغيير الشعار وحفظه.')
                           })
                           .catch(() => toast.error('فشل رفع الشعار'))
                         e.target.value = ''
