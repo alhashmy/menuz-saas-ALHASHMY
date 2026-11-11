@@ -52,6 +52,36 @@ export function OrderNotificationListener() {
   }, [notificationSoundUrl])
 
   useEffect(() => {
+    if (!soundEnabled) return
+    let active = true
+    const unlockAudio = () => {
+      const audio = audioRef.current
+      if (!audio) return
+      audio.volume = 0
+      void audio
+        .play()
+        .then(() => {
+          if (!active) return
+          audio.pause()
+          audio.currentTime = 0
+          audio.volume = 1
+          useNotificationStore.getState().setAudioUnlocked(true)
+        })
+        .catch(() => undefined)
+    }
+
+    // A direct muted attempt succeeds in browsers that permit restored media playback.
+    unlockAudio()
+    window.addEventListener('pointerdown', unlockAudio, { once: true })
+    window.addEventListener('keydown', unlockAudio, { once: true })
+    return () => {
+      active = false
+      window.removeEventListener('pointerdown', unlockAudio)
+      window.removeEventListener('keydown', unlockAudio)
+    }
+  }, [notificationSoundUrl, soundEnabled])
+
+  useEffect(() => {
     if (!restaurantId) return
     const channel = supabase
       .channel(`custom-insert-channel-${restaurantId}`)
@@ -80,7 +110,6 @@ export function OrderNotificationListener() {
             void audioRef.current.play().catch(() => undefined)
           }
           if (
-            document.visibilityState !== 'visible' &&
             'Notification' in window &&
             Notification.permission === 'granted'
           ) {
@@ -90,9 +119,12 @@ export function OrderNotificationListener() {
               tag: `order-${sequence}`,
             })
           }
-          toast.success('وصل طلب جديد الآن.', {
-            description: `${customerName} — رقم الطلب ${sequence}`,
-          })
+          toast.success(
+            `🚨 لديك طلب جديد! — طلب رقم #${sequence} من ${customerName}`,
+            {
+              duration: 10_000,
+            }
+          )
           void queryClient.invalidateQueries({
             queryKey: ['orders', restaurantId],
           })

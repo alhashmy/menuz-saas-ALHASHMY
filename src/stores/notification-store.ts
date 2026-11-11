@@ -4,6 +4,7 @@ import { persist } from 'zustand/middleware'
 type NotificationState = {
   soundEnabled: boolean
   audioUnlocked: boolean
+  hasHydrated: boolean
   notificationSoundUrl: string | null
   setSoundEnabled: (enabled: boolean) => void
   setAudioUnlocked: (unlocked: boolean) => void
@@ -15,6 +16,7 @@ export const useNotificationStore = create<NotificationState>()(
     (set) => ({
       soundEnabled: false,
       audioUnlocked: false,
+      hasHydrated: false,
       notificationSoundUrl: null,
       setSoundEnabled: (soundEnabled) => set({ soundEnabled }),
       setAudioUnlocked: (audioUnlocked) => set({ audioUnlocked }),
@@ -24,6 +26,9 @@ export const useNotificationStore = create<NotificationState>()(
     {
       name: 'menuz-order-notifications',
       partialize: (state) => ({ soundEnabled: state.soundEnabled }),
+      onRehydrateStorage: () => () => {
+        useNotificationStore.setState({ hasHydrated: true })
+      },
     }
   )
 )

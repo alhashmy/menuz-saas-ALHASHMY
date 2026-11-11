@@ -1,12 +1,13 @@
 import { BellRing } from 'lucide-react'
 import { toast } from 'sonner'
 import { useNotificationStore } from '@/stores/notification-store'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { getNotificationSoundUrl } from './sound'
 
 export function NotificationActivationButton() {
   const soundEnabled = useNotificationStore((state) => state.soundEnabled)
-  const audioUnlocked = useNotificationStore((state) => state.audioUnlocked)
+  const hasHydrated = useNotificationStore((state) => state.hasHydrated)
   const notificationSoundUrl = useNotificationStore(
     (state) => state.notificationSoundUrl
   )
@@ -15,7 +16,15 @@ export function NotificationActivationButton() {
     (state) => state.setAudioUnlocked
   )
 
-  if (audioUnlocked && soundEnabled) return null
+  if (!hasHydrated) return null
+
+  if (soundEnabled) {
+    return (
+      <Badge variant='secondary' className='gap-1.5 whitespace-nowrap'>
+        <BellRing className='size-3.5' /> 🔔 الإشعارات مفعلة
+      </Badge>
+    )
+  }
 
   async function activate() {
     const audio = new Audio(getNotificationSoundUrl(notificationSoundUrl))
