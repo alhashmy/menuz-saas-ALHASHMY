@@ -24,6 +24,7 @@ import { Route as authOtpRouteImport } from './routes/(auth)/otp'
 import { Route as authForgotPasswordRouteImport } from './routes/(auth)/forgot-password'
 import { Route as AuthenticatedSettingsRouteRouteImport } from './routes/_authenticated/settings/route'
 import { Route as AuthenticatedTablesIndexRouteImport } from './routes/_authenticated/tables/index'
+import { Route as AuthenticatedSupportIndexRouteImport } from './routes/_authenticated/support/index'
 import { Route as AuthenticatedSuperAdminIndexRouteImport } from './routes/_authenticated/super-admin/index'
 import { Route as AuthenticatedStaffIndexRouteImport } from './routes/_authenticated/staff/index'
 import { Route as AuthenticatedSettingsIndexRouteImport } from './routes/_authenticated/settings/index'
@@ -115,6 +116,12 @@ const AuthenticatedTablesIndexRoute =
   AuthenticatedTablesIndexRouteImport.update({
     id: '/tables/',
     path: '/tables/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedSupportIndexRoute =
+  AuthenticatedSupportIndexRouteImport.update({
+    id: '/support/',
+    path: '/support/',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedSuperAdminIndexRoute =
@@ -241,6 +248,7 @@ export interface FileRoutesByFullPath {
   '/settings/': typeof AuthenticatedSettingsIndexRoute
   '/staff/': typeof AuthenticatedStaffIndexRoute
   '/super-admin/': typeof AuthenticatedSuperAdminIndexRoute
+  '/support/': typeof AuthenticatedSupportIndexRoute
   '/tables/': typeof AuthenticatedTablesIndexRoute
 }
 export interface FileRoutesByTo {
@@ -272,6 +280,7 @@ export interface FileRoutesByTo {
   '/settings': typeof AuthenticatedSettingsIndexRoute
   '/staff': typeof AuthenticatedStaffIndexRoute
   '/super-admin': typeof AuthenticatedSuperAdminIndexRoute
+  '/support': typeof AuthenticatedSupportIndexRoute
   '/tables': typeof AuthenticatedTablesIndexRoute
 }
 export interface FileRoutesById {
@@ -306,6 +315,7 @@ export interface FileRoutesById {
   '/_authenticated/settings/': typeof AuthenticatedSettingsIndexRoute
   '/_authenticated/staff/': typeof AuthenticatedStaffIndexRoute
   '/_authenticated/super-admin/': typeof AuthenticatedSuperAdminIndexRoute
+  '/_authenticated/support/': typeof AuthenticatedSupportIndexRoute
   '/_authenticated/tables/': typeof AuthenticatedTablesIndexRoute
 }
 export interface FileRouteTypes {
@@ -340,6 +350,7 @@ export interface FileRouteTypes {
     | '/settings/'
     | '/staff/'
     | '/super-admin/'
+    | '/support/'
     | '/tables/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -371,6 +382,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/staff'
     | '/super-admin'
+    | '/support'
     | '/tables'
   id:
     | '__root__'
@@ -404,6 +416,7 @@ export interface FileRouteTypes {
     | '/_authenticated/settings/'
     | '/_authenticated/staff/'
     | '/_authenticated/super-admin/'
+    | '/_authenticated/support/'
     | '/_authenticated/tables/'
   fileRoutesById: FileRoutesById
 }
@@ -528,6 +541,13 @@ declare module '@tanstack/react-router' {
       path: '/tables'
       fullPath: '/tables/'
       preLoaderRoute: typeof AuthenticatedTablesIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/support/': {
+      id: '/_authenticated/support/'
+      path: '/support'
+      fullPath: '/support/'
+      preLoaderRoute: typeof AuthenticatedSupportIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/super-admin/': {
@@ -678,6 +698,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedQrCodesIndexRoute: typeof AuthenticatedQrCodesIndexRoute
   AuthenticatedStaffIndexRoute: typeof AuthenticatedStaffIndexRoute
   AuthenticatedSuperAdminIndexRoute: typeof AuthenticatedSuperAdminIndexRoute
+  AuthenticatedSupportIndexRoute: typeof AuthenticatedSupportIndexRoute
   AuthenticatedTablesIndexRoute: typeof AuthenticatedTablesIndexRoute
 }
 
@@ -696,6 +717,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedQrCodesIndexRoute: AuthenticatedQrCodesIndexRoute,
   AuthenticatedStaffIndexRoute: AuthenticatedStaffIndexRoute,
   AuthenticatedSuperAdminIndexRoute: AuthenticatedSuperAdminIndexRoute,
+  AuthenticatedSupportIndexRoute: AuthenticatedSupportIndexRoute,
   AuthenticatedTablesIndexRoute: AuthenticatedTablesIndexRoute,
 }
 

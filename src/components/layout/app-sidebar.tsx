@@ -21,8 +21,9 @@ export function AppSidebar() {
   const platformAdmin = useAuthStore((state) => state.platformAdmin)
   const userType = useAuthStore((state) => state.userType)
   const restaurant = useAuthStore((state) => state.restaurant)
+  const unreadCount = useAuthStore((state) => state.unreadCount)
 
-  const sidebarData = createSidebarData({ t, user, platformAdmin, userType, restaurant })
+  const sidebarData = createSidebarData({ t, user, platformAdmin, userType, restaurant, unreadCount })
   return (
     <Sidebar collapsible={collapsible} variant={variant}>
       <SidebarHeader>

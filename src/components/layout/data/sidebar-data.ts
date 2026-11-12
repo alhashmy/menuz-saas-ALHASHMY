@@ -5,6 +5,7 @@ import {
   ClipboardList,
   Command,
   Grid,
+  Headset,
   Layout,
   LayoutDashboard,
   LayoutGrid,
@@ -25,6 +26,7 @@ interface CreateSidebarDataParams {
   platformAdmin: PlatformAdmin | null
   userType: UserType | null
   restaurant: RestaurantContext | null
+  unreadCount: number
 }
 
 function getInitials(name: string | null | undefined, email: string): string {
@@ -70,6 +72,7 @@ export function createSidebarData({
   platformAdmin,
   userType,
   restaurant,
+  unreadCount,
 }: CreateSidebarDataParams): SidebarData {
   const navGroups = [
     {
@@ -93,6 +96,7 @@ export function createSidebarData({
         { title: t('nav.staff'), url: '/staff', icon: Users },
         { title: t('nav.analytics'), url: '/analytics', icon: BarChart3 },
         { title: t('nav.apps'), url: '/apps', icon: Grid },
+        { title: t('nav.support'), url: '/support', icon: Headset, badge: unreadCount > 0 ? String(unreadCount) : undefined },
       ],
     },
     {

@@ -1,10 +1,11 @@
 import { useState } from 'react'
-import { Bell, CheckCircle, AlertCircle, Mail, MessageSquare, ExternalLink, ChevronDown } from 'lucide-react'
+import { Bell, CheckCircle, AlertCircle, Mail, MessageSquare, ExternalLink, ChevronDown, ArrowRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { useAuthStore } from '@/stores/auth-store'
+import { useNavigate } from '@tanstack/react-router'
 import { cn } from '@/lib/utils'
 
 const TYPE_CONFIG = {
@@ -94,24 +95,33 @@ function NotificationCard({
 export function NotificationBanner() {
   const { notifications, unreadCount, markNotificationRead } = useAuthStore()
   const [isOpen, setIsOpen] = useState(false)
+  const navigate = useNavigate()
 
   if (unreadCount === 0 && notifications.length === 0) return null
 
-  const unreadNotifications = notifications.filter((n) => !n.is_read)
+  const now = Date.now()
+  const twentyFourHoursAgo = now - 24 * 60 * 60 * 1000
+  const recentNotifications = notifications.filter((n) => new Date(n.created_at).getTime() >= twentyFourHoursAgo)
+  const unreadNotifications = recentNotifications.filter((n) => !n.is_read)
+
+  const handleNavigateToSupport = () => {
+    setIsOpen(false)
+    navigate({ to: '/support' })
+  }
 
   return (
     <div className='fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-96 z-50'>
       <div className={cn(
-        'bg-white rounded-xl shadow-xl border overflow-hidden transition-all duration-300',
+        'bg-slate-900 text-slate-50 border border-slate-700 shadow-2xl rounded-xl overflow-hidden transition-all duration-300',
         isOpen ? 'max-h-[500px]' : 'max-h-20'
       )}>
         {/* Header */}
-        <div className='flex items-center justify-between p-4 bg-gradient-to-r from-primary to-primary/80 text-white'>
+        <div className='flex items-center justify-between p-4 bg-slate-800/90 border-b border-slate-700 cursor-pointer' onClick={handleNavigateToSupport}>
           <div className='flex items-center gap-3'>
-            <Bell className='size-5' />
+            <Bell className='size-5 text-primary' />
             <div>
               <p className='font-semibold'>إشعارات من الإدارة</p>
-              <p className='text-xs opacity-90'>
+              <p className='text-xs text-slate-400'>
                 {unreadCount > 0 ? `${unreadCount} إشعار جديد` : 'لا توجد إشعارات جديدة'}
               </p>
             </div>
@@ -119,8 +129,8 @@ export function NotificationBanner() {
           <Button
             variant='ghost'
             size='icon'
-            className='text-white hover:bg-white/10'
-            onClick={() => setIsOpen(!isOpen)}
+            className='text-slate-300 hover:bg-slate-700/50'
+            onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen); }}
             aria-label={isOpen ? 'إغلاق' : 'فتح'}
           >
             {isOpen ? <ChevronDown className='size-5' /> : <ChevronDown className='size-5 rotate-180' />}
@@ -131,7 +141,7 @@ export function NotificationBanner() {
           <div className='p-4 space-y-3 max-h-[400px] overflow-y-auto'>
             {unreadNotifications.length > 0 && (
               <>
-                <p className='text-sm font-medium text-rose-600'>غير مقروء ({unreadCount})</p>
+                <p className='text-sm font-medium text-rose-400'>غير مقروء ({unreadNotifications.length})</p>
                 {unreadNotifications.map((notification) => (
                   <NotificationCard
                     key={notification.id}
@@ -142,11 +152,11 @@ export function NotificationBanner() {
               </>
             )}
 
-            {notifications.filter((n) => n.is_read).length > 0 && (
+            {recentNotifications.filter((n) => n.is_read).length > 0 && (
               <>
-                <Separator className='my-2' />
-                <p className='text-sm font-medium text-muted-foreground'>مقروءة</p>
-                {notifications.filter((n) => n.is_read).slice(0, 5).map((notification) => (
+                <Separator className='my-2 border-slate-700' />
+                <p className='text-sm font-medium text-slate-400'>مقروءة</p>
+                {recentNotifications.filter((n) => n.is_read).slice(0, 5).map((notification) => (
                   <NotificationCard
                     key={notification.id}
                     notification={notification}
@@ -157,10 +167,15 @@ export function NotificationBanner() {
               </>
             )}
 
-            {notifications.length > 5 && (
-              <Button variant='outline' size='sm' className='w-full mt-2' onClick={() => setIsOpen(true)}>
-                عرض جميع الإشعارات ({notifications.length})
+            {recentNotifications.length > 5 && (
+              <Button variant='outline' size='sm' className='w-full mt-2 border-slate-700 text-slate-300 hover:bg-slate-800' onClick={handleNavigateToSupport}>
+                <ArrowRight className='mr-2 size-4' />
+                عرض جميع الإشعارات في صفحة الدعم ({recentNotifications.length})
               </Button>
+            )}
+
+            {recentNotifications.length === 0 && (
+              <p className='text-center text-slate-500 py-4'>لا توجد إشعارات خلال الـ 24 ساعة الماضية</p>
             )}
           </div>
         )}

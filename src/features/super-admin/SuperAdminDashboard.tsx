@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Plus, Eye, Trash2, Users, Activity, AlertCircle, CheckCircle, XCircle, Loader2, Shield, Bell, Mail, UserPlus, UserCheck, UserX, MessageSquare, Calendar, UtensilsCrossed, KeyRound, Copy, Eye as EyeIcon, EyeOff, ShieldCheck, RotateCcw } from 'lucide-react'
+import { Plus, Eye, Trash2, Users, Activity, AlertCircle, CheckCircle, XCircle, Loader2, Shield, Bell, Mail, UserPlus, UserCheck, UserX, MessageSquare, Calendar, UtensilsCrossed, KeyRound, Copy, Eye as EyeIcon, EyeOff, ShieldCheck, RotateCcw, Send, Reply, ExternalLink } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -33,6 +33,7 @@ import {
   usePlatformAdminStats,
   useNotifications,
   useNotificationStats,
+  useConversations,
   useToggleRestaurantActive,
   useUpdateRestaurant,
   useCreateRestaurant,
@@ -41,6 +42,7 @@ import {
   useDeletePlatformAdmin,
   useDeleteRestaurant,
   useSendNotification,
+  useReplyToRestaurant,
   usePasswordAuditLogs,
   usePasswordAuditStats,
   useRootResetPassword,
@@ -345,6 +347,7 @@ export function SuperAdminDashboard() {
   const { data: adminStats, isLoading: adminStatsLoading } = usePlatformAdminStats()
   const { data: notifications = [], isLoading: notificationsLoading } = useNotifications()
   const { data: notificationStats, isLoading: notificationStatsLoading } = useNotificationStats()
+  const { data: conversations = [], isLoading: conversationsLoading } = useConversations()
   const { data: passwordAuditLogs = [], isLoading: passwordAuditLoading } = usePasswordAuditLogs()
   const { data: passwordAuditStats, isLoading: passwordAuditStatsLoading } = usePasswordAuditStats()
 
@@ -356,6 +359,7 @@ export function SuperAdminDashboard() {
   const toggleAdminMutation = useTogglePlatformAdmin()
   const deleteAdminMutation = useDeletePlatformAdmin()
   const sendNotificationMutation = useSendNotification()
+  const replyToRestaurantMutation = useReplyToRestaurant()
   const rootResetPasswordMutation = useRootResetPassword()
   const markPasswordAuditReadMutation = useMarkPasswordAuditRead()
   const rootChangeOwnPasswordMutation = useRootChangeOwnPassword()
@@ -363,6 +367,7 @@ export function SuperAdminDashboard() {
   const [activeTab, setActiveTab] = useState<'restaurants' | 'admins' | 'notifications' | 'password-audit'>('restaurants')
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [notificationDialogOpen, setNotificationDialogOpen] = useState<{ open: boolean; restaurant?: Restaurant }>({ open: false })
+  const [replyDialogOpen, setReplyDialogOpen] = useState<{ open: boolean; conversation?: PlatformNotification }>({ open: false })
   const [resetPasswordDialogOpen, setResetPasswordDialogOpen] = useState<{ open: boolean; targetUserId?: string; targetEmail?: string; entityName?: string; targetType?: 'restaurant' | 'admin' }>({ open: false })
   const [rootOwnPasswordDialogOpen, setRootOwnPasswordDialogOpen] = useState(false)
   const [formData, setFormData] = useState<CreateRestaurantInput>({
@@ -382,6 +387,15 @@ export function SuperAdminDashboard() {
     title: '',
     message: '',
     type: 'info',
+    contact_url: '',
+  })
+  const [replyFormData, setReplyFormData] = useState<{
+    message: string
+    type: 'subscription_warning' | 'urgent' | 'info' | 'chat'
+    contact_url: string
+  }>({
+    message: '',
+    type: 'chat',
     contact_url: '',
   })
   const [resetPasswordFormData, setResetPasswordFormData] = useState({
@@ -416,6 +430,20 @@ export function SuperAdminDashboard() {
     await sendNotificationMutation.mutateAsync(notificationFormData)
     setNotificationDialogOpen({ open: false })
     setNotificationFormData({ restaurant_id: '', title: '', message: '', type: 'info', contact_url: '' })
+  }
+
+  const handleReplySubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!replyFormData.message.trim() || !replyDialogOpen.conversation) return
+
+    await replyToRestaurantMutation.mutateAsync({
+      restaurant_id: replyDialogOpen.conversation.restaurant_id,
+      message: replyFormData.message.trim(),
+      type: replyFormData.type,
+      contact_url: replyFormData.contact_url || undefined,
+    })
+    setReplyDialogOpen({ open: false })
+    setReplyFormData({ message: '', type: 'chat', contact_url: '' })
   }
 
   const handleDelete = (id: string) => {
@@ -710,7 +738,7 @@ export function SuperAdminDashboard() {
       <Separator />
 
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'restaurants' | 'admins' | 'notifications' | 'password-audit')} className='w-full'>
-        <TabsList className='grid w-full grid-cols-4'>
+        <TabsList className='grid w-full grid-cols-5'>
           <TabsTrigger value='restaurants'>
             <UtensilsCrossed className='mr-2 size-4' /> المطاعم
           </TabsTrigger>
@@ -724,6 +752,14 @@ export function SuperAdminDashboard() {
             {notificationStats && notificationStats.unread_notifications > 0 && (
               <span className='ml-1 inline-flex h-5 w-5 items-center justify-center rounded-full bg-rose-500 text-[10px] font-medium text-white'>
                 {notificationStats.unread_notifications}
+              </span>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value='conversations'>
+            <MessageSquare className='mr-2 size-4' /> التواصل
+            {conversations.filter((c) => c.sender_role === 'restaurant' && !c.is_read).length > 0 && (
+              <span className='ml-1 inline-flex h-5 w-5 items-center justify-center rounded-full bg-rose-500 text-[10px] font-medium text-white'>
+                {conversations.filter((c) => c.sender_role === 'restaurant' && !c.is_read).length}
               </span>
             )}
           </TabsTrigger>
@@ -1079,6 +1115,171 @@ export function SuperAdminDashboard() {
                             <TableCell>{formatDateTime(notification.created_at)}</TableCell>
                             <TableCell>
                               {notification.is_read ? <ReadBadge /> : <UnreadBadge />}
+                            </TableCell>
+                          </TableRow>
+                        )
+                      })}
+                    </TableBody>
+                  </Table>
+                </ScrollArea>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value='conversations' className='mt-4'>
+          <div className='grid gap-4 md:grid-cols-4'>
+            <Card>
+              <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
+                <CardTitle className='text-sm font-medium text-muted-foreground'>إجمالي المحادثات</CardTitle>
+                <MessageSquare className='size-4 text-muted-foreground' />
+              </CardHeader>
+              <CardContent>
+                <div className='text-2xl font-bold'>{conversations.length}</div>
+                <p className='text-xs text-muted-foreground'>رسالة في النظام</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
+                <CardTitle className='text-sm font-medium text-muted-foreground'>رسائل واردة من المطاعم</CardTitle>
+                <Mail className='size-4 text-blue-600' />
+              </CardHeader>
+              <CardContent>
+                <div className='text-2xl font-bold text-blue-600'>
+                  {conversations.filter((c) => c.sender_role === 'restaurant').length}
+                </div>
+                <p className='text-xs text-muted-foreground'>تتطلب متابعة</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
+                <CardTitle className='text-sm font-medium text-muted-foreground'>غير مقروءة (مطاعم)</CardTitle>
+                <AlertCircle className='size-4 text-rose-600' />
+              </CardHeader>
+              <CardContent>
+                <div className='text-2xl font-bold text-rose-600'>
+                  {conversations.filter((c) => c.sender_role === 'restaurant' && !c.is_read).length}
+                </div>
+                <p className='text-xs text-muted-foreground'>بانتظار الرد</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
+                <CardTitle className='text-sm font-medium text-muted-foreground'>رسائل صادرة من الإدارة</CardTitle>
+                <Send className='size-4 text-emerald-600' />
+              </CardHeader>
+              <CardContent>
+                <div className='text-2xl font-bold text-emerald-600'>
+                  {conversations.filter((c) => c.sender_role === 'admin').length}
+                </div>
+                <p className='text-xs text-muted-foreground'>تم إرسالها</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>جميع المحادثات والتواصل</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {(conversationsLoading) ? (
+                <div className='flex h-64 items-center justify-center'>
+                  <Loader2 className='size-8 animate-spin text-primary' />
+                </div>
+              ) : conversations.length === 0 ? (
+                <div className='text-center py-12 text-muted-foreground'>
+                  <MessageSquare className='mx-auto size-12 mb-3 text-muted-foreground/50' />
+                  <p className='text-lg font-medium'>لا توجد محادثات</p>
+                  <p className='text-sm'>ستظهر هنا جميع رسائل المطاعم وردود الإدارة</p>
+                </div>
+              ) : (
+                <ScrollArea className='max-h-[600px]'>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className='w-[100px]'>النوع</TableHead>
+                        <TableHead>اتجاه الرسالة</TableHead>
+                        <TableHead>المطعم</TableHead>
+                        <TableHead>العنوان / المرسل</TableHead>
+                        <TableHead>الرسالة</TableHead>
+                        <TableHead>التاريخ</TableHead>
+                        <TableHead className='w-[100px]'>الحالة</TableHead>
+                        <TableHead className='w-[140px]'>إجراءات</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {conversations.map((conversation) => {
+                        const isFromRestaurant = conversation.sender_role === 'restaurant'
+                        return (
+                          <TableRow key={conversation.id} className={conversation.is_read ? 'bg-muted/30' : ''}>
+                            <TableCell>
+                              <NotificationTypeBadge type={conversation.type} />
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant={isFromRestaurant ? 'outline' : 'default'} className={isFromRestaurant ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'}>
+                                {isFromRestaurant ? (
+                                  <>
+                                    <Mail className='mr-1 size-3' />
+                                    واردة من المطعم
+                                  </>
+                                ) : (
+                                  <>
+                                    <Send className='mr-1 size-3' />
+                                    صادرة من الإدارة
+                                  </>
+                                )}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <div className='font-medium'>{conversation.restaurant?.name ?? '—'}</div>
+                              <div className='text-sm text-muted-foreground font-mono'>/menu/{conversation.restaurant?.slug ?? '—'}</div>
+                            </TableCell>
+                            <TableCell>
+                              {isFromRestaurant ? (
+                                <>
+                                  <div className='font-medium text-blue-600'>{conversation.sender_email ?? 'المطعم'}</div>
+                                  <div className='text-xs text-muted-foreground'>{conversation.title}</div>
+                                </>
+                              ) : (
+                                <>
+                                  <div className='font-medium text-emerald-600'>الإدارة</div>
+                                  <div className='text-xs text-muted-foreground'>{conversation.title}</div>
+                                </>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <div className='max-w-xs truncate'>{conversation.message}</div>
+                            </TableCell>
+                            <TableCell>{formatDateTime(conversation.created_at)}</TableCell>
+                            <TableCell>
+                              {conversation.is_read ? <ReadBadge /> : <UnreadBadge />}
+                            </TableCell>
+                            <TableCell>
+                              <div className='flex items-center gap-1'>
+                                {isFromRestaurant && !conversation.is_read && (
+                                  <Button
+                                    variant='outline'
+                                    size='sm'
+                                    onClick={() => setReplyDialogOpen({ open: true, conversation })}
+                                    disabled={replyToRestaurantMutation.isPending}
+                                    className='gap-1 h-8 px-2'
+                                  >
+                                    <Reply className='size-3' />
+                                    رد
+                                  </Button>
+                                )}
+                                {conversation.contact_url && (
+                                  <Button
+                                    variant='ghost'
+                                    size='icon'
+                                    onClick={() => window.open(conversation.contact_url!, '_blank')}
+                                    className='h-8 w-8'
+                                    title='فتح قناة التواصل'
+                                  >
+                                    <ExternalLink className='size-3' />
+                                  </Button>
+                                )}
+                              </div>
                             </TableCell>
                           </TableRow>
                         )
@@ -1468,6 +1669,67 @@ export function SuperAdminDashboard() {
               </Button>
               <Button type='submit' disabled={sendNotificationMutation.isPending}>
                 {sendNotificationMutation.isPending ? 'جاري الإرسال...' : 'إرسال الإشعار'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reply Dialog */}
+      <Dialog open={replyDialogOpen.open} onOpenChange={() => setReplyDialogOpen({ open: false })}>
+        <DialogContent className='max-w-2xl max-h-[90vh] overflow-y-auto'>
+          <DialogHeader>
+            <DialogTitle>الرد على المطعم</DialogTitle>
+            <DialogDescription>
+              اكتب ردك على رسالة المطعم. سيتم إرساله كإشعار من الإدارة.
+            </DialogDescription>
+          </DialogHeader>
+          {replyDialogOpen.conversation && (
+            <div className='p-3 bg-blue-50 rounded-lg border border-blue-200 mb-4'>
+              <p className='text-sm font-medium'>الرد على: {replyDialogOpen.conversation.restaurant?.name ?? 'المطعم'}</p>
+              <p className='text-xs text-muted-foreground'>/menu/{replyDialogOpen.conversation.restaurant?.slug ?? '—'}</p>
+              <p className='text-xs text-muted-foreground mt-1'>رسالة المطعم: {replyDialogOpen.conversation.message.slice(0, 100)}...</p>
+            </div>
+          )}
+          <form onSubmit={handleReplySubmit} className='space-y-4 mt-4'>
+            <div className='space-y-1.5'>
+              <Label>نوع الرد *</Label>
+              <Select value={replyFormData.type} onValueChange={(v) => setReplyFormData({ ...replyFormData, type: v as 'subscription_warning' | 'urgent' | 'info' | 'chat' })} required>
+                <SelectTrigger>
+                  <SelectValue placeholder='اختر نوع الرد' />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value='chat'>رد على استفسار / تواصل</SelectItem>
+                  <SelectItem value='info'>معلومة عامة</SelectItem>
+                  <SelectItem value='subscription_warning'>تنبيه الاشتراك</SelectItem>
+                  <SelectItem value='urgent'>عاجل</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className='space-y-1.5'>
+              <Label>نص الرد *</Label>
+              <Textarea
+                value={replyFormData.message}
+                onChange={(e) => setReplyFormData({ ...replyFormData, message: e.target.value })}
+                placeholder='اكتب ردك هنا...'
+                rows={4}
+                required
+              />
+            </div>
+            <div className='space-y-1.5'>
+              <Label>رابط تواصل مباشر (اختياري)</Label>
+              <Input
+                value={replyFormData.contact_url}
+                onChange={(e) => setReplyFormData({ ...replyFormData, contact_url: e.target.value })}
+                placeholder='https://wa.me/... أو رابط دردشة'
+              />
+            </div>
+            <DialogFooter>
+              <Button type='button' variant='outline' onClick={() => setReplyDialogOpen({ open: false })}>
+                إلغاء
+              </Button>
+              <Button type='submit' disabled={replyToRestaurantMutation.isPending || !replyFormData.message.trim()}>
+                {replyToRestaurantMutation.isPending ? 'جاري الإرسال...' : 'إرسال الرد'}
               </Button>
             </DialogFooter>
           </form>

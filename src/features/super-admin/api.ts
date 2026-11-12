@@ -68,6 +68,9 @@ export interface PlatformNotification {
   read_at: string | null
   created_at: string
   restaurant?: Restaurant
+  sender_role?: 'admin' | 'restaurant'
+  sender_id?: string
+  sender_email?: string
 }
 
 export interface PasswordAuditLog {
@@ -174,6 +177,63 @@ export async function fetchPlatformAdminStats(): Promise<PlatformAdminStats> {
     active_sub_admins: 0,
     inactive_sub_admins: 0,
   }
+}
+
+export async function fetchConversations(): Promise<PlatformNotification[]> {
+  const { data, error } = await supabase
+    .from('platform_notifications')
+    .select(`
+      id, restaurant_id, admin_id, title, message, type, contact_url, is_read, read_at, created_at,
+      sender_role, sender_id, sender_email,
+      restaurant:restaurants(id, slug, name, name_ar, owner_email, is_active, subscription_ends_at, created_at)
+    `)
+    .order('created_at', { ascending: false })
+    .limit(500)
+
+  if (error) throw error
+  if (!data) return []
+
+  interface NotificationWithRestaurantArray {
+    id: string
+    restaurant_id: string
+    admin_id: string | null
+    title: string
+    message: string
+    type: 'subscription_warning' | 'urgent' | 'info' | 'chat'
+    contact_url: string | null
+    is_read: boolean
+    read_at: string | null
+    created_at: string
+    sender_role: 'admin' | 'restaurant' | null
+    sender_id: string | null
+    sender_email: string | null
+    restaurant: Array<{
+      id: string
+      slug: string
+      name: string
+      name_ar: string | null
+      owner_email: string | null
+      is_active: boolean
+      subscription_ends_at: string | null
+      created_at: string
+    }> | null
+  }
+
+  return data.map((notification: NotificationWithRestaurantArray) => ({
+    ...notification,
+    sender_role: notification.sender_role ?? (notification.admin_id ? 'admin' : 'restaurant'),
+    sender_id: notification.sender_id ?? notification.admin_id ?? '',
+    sender_email: notification.sender_email ?? (notification.admin_id ? 'الإدارة' : 'المطعم'),
+    restaurant: notification.restaurant?.[0] ?? null,
+  })) as PlatformNotification[]
+}
+
+export function useConversations() {
+  return useQuery({
+    queryKey: ['super-admin', 'conversations'],
+    queryFn: fetchConversations,
+    retry: false,
+  })
 }
 
 export async function fetchNotifications(): Promise<PlatformNotification[]> {
@@ -579,6 +639,9 @@ export function useSendNotification() {
           message: input.message,
           type: input.type,
           contact_url: input.contact_url,
+          sender_role: 'admin',
+          sender_id: user?.id,
+          sender_email: user?.email,
         })
 
       if (error) throw error
@@ -587,9 +650,51 @@ export function useSendNotification() {
       toast.success('تم إرسال الإشعار بنجاح')
       queryClient.invalidateQueries({ queryKey: ['super-admin', 'notifications'] })
       queryClient.invalidateQueries({ queryKey: ['super-admin', 'notification-stats'] })
+      queryClient.invalidateQueries({ queryKey: ['super-admin', 'conversations'] })
     },
     onError: (error) => {
       toast.error(error instanceof Error ? error.message : 'تعذر إرسال الإشعار')
+    },
+  })
+}
+
+export interface ReplyToRestaurantInput {
+  restaurant_id: string
+  message: string
+  type?: 'subscription_warning' | 'urgent' | 'info' | 'chat'
+  contact_url?: string
+}
+
+export function useReplyToRestaurant() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (input: ReplyToRestaurantInput) => {
+      const { data: { user } } = await supabase.auth.getUser()
+      const { error } = await supabase
+        .from('platform_notifications')
+        .insert({
+          restaurant_id: input.restaurant_id,
+          admin_id: user?.id,
+          title: 'رد من فريق الدعم الفني',
+          message: input.message,
+          type: input.type ?? 'chat',
+          contact_url: input.contact_url ?? null,
+          sender_role: 'admin',
+          sender_id: user?.id,
+          sender_email: user?.email,
+        })
+
+      if (error) throw error
+    },
+    onSuccess: () => {
+      toast.success('تم إرسال الرد بنجاح')
+      queryClient.invalidateQueries({ queryKey: ['super-admin', 'conversations'] })
+      queryClient.invalidateQueries({ queryKey: ['super-admin', 'notifications'] })
+      queryClient.invalidateQueries({ queryKey: ['super-admin', 'notification-stats'] })
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : 'تعذر إرسال الرد')
     },
   })
 }
