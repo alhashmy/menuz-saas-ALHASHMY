@@ -39,6 +39,13 @@ SET
 WHERE sender_role IS NULL;
 
 -- Make sender_role NOT NULL after backfill
+UPDATE public.platform_notifications
+SET
+  sender_role = COALESCE(sender_role, CASE WHEN admin_id IS NOT NULL THEN 'admin' ELSE 'restaurant' END),
+  sender_id = COALESCE(sender_id, admin_id, '00000000-0000-0000-0000-000000000000'::uuid),
+  sender_email = COALESCE(sender_email, 'alhashmy@manger.iq')
+WHERE sender_role IS NULL OR sender_id IS NULL OR sender_email IS NULL;
+
 ALTER TABLE public.platform_notifications
   ALTER COLUMN sender_role SET NOT NULL,
   ALTER COLUMN sender_id SET NOT NULL,
