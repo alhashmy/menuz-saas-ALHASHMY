@@ -129,14 +129,6 @@ export const MENU_THEMES: {
     layoutTemplate: 'visual-categories',
   },
   {
-    id: 'delivery',
-    label: 'دليفري',
-    description: 'تطبيق توصيل',
-    accentColor: '#ff5a1f',
-    themeMode: 'light',
-    layoutTemplate: 'list-categories',
-  },
-  {
     id: 'delivery-app',
     label: 'قالب تطبيقات التوصيل',
     description: 'واجهة تطبيق توصيل احترافية',

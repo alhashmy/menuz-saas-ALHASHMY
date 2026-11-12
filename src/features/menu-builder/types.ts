@@ -35,7 +35,6 @@ export type MenuTemplateId =
   | 'cafe'
   | 'market'
   | 'modern'
-  | 'delivery'
   | 'delivery-app'
 
 /** القوالب الأساسية لها هوية ثابتة ولا تسمح بتغيير التخطيط أو لوحة الألوان. */

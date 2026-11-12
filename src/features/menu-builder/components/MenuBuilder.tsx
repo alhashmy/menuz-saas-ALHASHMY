@@ -88,9 +88,9 @@ export function MenuBuilder() {
         if (catsRes.error) throw catsRes.error
         const savedStyle = (brandRes.data?.style as MenuStyle | null) ?? null
         const hasBrokenLegacyDelivery =
-          savedStyle?.menuTemplate === 'delivery' &&
-          savedStyle.themeMode === 'light' &&
-          (savedStyle.backgroundColor === '#000000' || savedStyle.secondaryColor === '#000000')
+          (savedStyle?.menuTemplate as string) === 'delivery' &&
+          savedStyle?.themeMode === 'light' &&
+          (savedStyle?.backgroundColor === '#000000' || savedStyle?.secondaryColor === '#000000')
         const normalizedSavedStyle = hasBrokenLegacyDelivery
           ? {
               ...savedStyle,

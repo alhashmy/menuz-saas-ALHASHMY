@@ -19,7 +19,6 @@ import { DeliveryAppMenu } from './components/delivery-app-menu'
 import { FloatingCart } from './components/floating-cart'
 import { ItemCard } from './components/item-card'
 import { ItemDetailsSheet } from './components/item-details-sheet'
-import { PromoBanner } from './components/promo-banner'
 import './public-menu.css'
 import { getMenuTemplate } from './templates/registry'
 
@@ -560,8 +559,6 @@ export function PublicMenu({ restaurantSlug }: PublicMenuProps) {
           onSelect={selectCategory}
         />
       )}
-
-      <PromoBanner offers={data.orderOffers} accentColor={accentColor} />
 
       <main className='mx-auto max-w-5xl px-4 pt-6 sm:px-6'>
         {query && (

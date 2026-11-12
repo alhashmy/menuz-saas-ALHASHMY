@@ -254,7 +254,7 @@ export function MobileCanvas({
   const orderedCategories = [...categories].sort(
     (a, b) => a.sort_order - b.sort_order
   )
-  const cols = menuTemplate === 'delivery' || menuTemplate === 'delivery-app' || menuTemplate === 'modern' || style.layoutTemplate === 'list-categories' ? 'grid-cols-1' : 'grid-cols-2'
+  const cols = menuTemplate === 'delivery-app' || menuTemplate === 'modern' || style.layoutTemplate === 'list-categories' ? 'grid-cols-1' : 'grid-cols-2'
   const previewThemes: Record<MenuTemplateId, { label: string; shell: string }> = {
     aurora: { label: 'أورا', shell: '#311b20' },
     noir: { label: 'نوار', shell: '#101112' },
@@ -267,7 +267,6 @@ export function MobileCanvas({
     cafe: { label: 'كافيه', shell: '#4c2f20' },
     market: { label: 'ماركت', shell: '#18254d' },
     modern: { label: 'منيو العصري', shell: '#281d4a' },
-    delivery: { label: 'دليفري', shell: '#4b1e15' },
     'delivery-app': { label: 'تطبيقات التوصيل', shell: '#fff7f1' },
   }
   const previewTheme = previewThemes[menuTemplate]
