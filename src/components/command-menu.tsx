@@ -15,13 +15,19 @@ import {
 import { createSidebarData } from './layout/data/sidebar-data'
 import { ScrollArea } from './ui/scroll-area'
 import { useLanguage } from '@/i18n'
+import { useAuthStore } from '@/stores/auth-store'
 
 export function CommandMenu() {
   const navigate = useNavigate()
   const { setTheme } = useTheme()
   const { open, setOpen } = useSearch()
   const { language, t } = useLanguage()
-  const sidebarData = createSidebarData(t)
+  const user = useAuthStore((state) => state.user)
+  const platformAdmin = useAuthStore((state) => state.platformAdmin)
+  const userType = useAuthStore((state) => state.userType)
+  const restaurant = useAuthStore((state) => state.restaurant)
+
+  const sidebarData = createSidebarData({ t, user, platformAdmin, userType, restaurant })
 
   const runCommand = React.useCallback(
     (command: () => unknown) => {

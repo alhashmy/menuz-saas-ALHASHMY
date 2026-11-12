@@ -1,5 +1,6 @@
 import { useLanguage } from '@/i18n'
 import { useLayout } from '@/context/layout-provider'
+import { useAuthStore } from '@/stores/auth-store'
 import {
   Sidebar,
   SidebarContent,
@@ -16,14 +17,19 @@ import { TeamSwitcher } from './team-switcher'
 export function AppSidebar() {
   const { collapsible, variant } = useLayout()
   const { t } = useLanguage()
-  const sidebarData = createSidebarData(t)
+  const user = useAuthStore((state) => state.user)
+  const platformAdmin = useAuthStore((state) => state.platformAdmin)
+  const userType = useAuthStore((state) => state.userType)
+  const restaurant = useAuthStore((state) => state.restaurant)
+
+  const sidebarData = createSidebarData({ t, user, platformAdmin, userType, restaurant })
   return (
     <Sidebar collapsible={collapsible} variant={variant}>
       <SidebarHeader>
         <TeamSwitcher teams={sidebarData.teams} />
 
         {/* Replace <TeamSwitch /> with the following <AppTitle />
-         /* if you want to use the normal app title instead of TeamSwitch dropdown */}
+        /* if you want to use the normal app title instead of TeamSwitch dropdown */}
         {/* <AppTitle /> */}
       </SidebarHeader>
       <SidebarContent>

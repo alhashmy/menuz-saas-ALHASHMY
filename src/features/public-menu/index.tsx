@@ -8,6 +8,7 @@ import {
   Store,
   UtensilsCrossed,
   X,
+  AlertCircle,
 } from 'lucide-react'
 import { useCartStore } from '@/stores/cart-store'
 import { getMenuImageUrl } from '@/lib/supabase'
@@ -228,6 +229,38 @@ export function PublicMenu({ restaurantSlug }: PublicMenuProps) {
 
   const restaurant = data.restaurant
   const restaurantName = restaurant.name_ar ?? restaurant.name
+
+  // Kill switch: Check if restaurant is inactive or subscription expired
+  const isInactive = restaurant.is_active === false
+  const isSubscriptionExpired = restaurant.subscription_ends_at && new Date(restaurant.subscription_ends_at) < new Date()
+
+  if (isInactive || isSubscriptionExpired) {
+    return (
+      <div
+        dir='rtl'
+        className='flex min-h-svh flex-col items-center justify-center gap-6 bg-[#f8f7f4] px-6 text-center text-slate-900'
+      >
+        <div className='flex size-20 items-center justify-center rounded-[1.5rem] bg-rose-50'>
+          <AlertCircle className='size-10 text-rose-500' />
+        </div>
+        <div className='max-w-md'>
+          <h1 className='text-2xl font-bold text-rose-600'>هذا المنيو متوقف حالياً</h1>
+          <p className='mt-3 text-lg text-slate-600 leading-relaxed'>
+            عذراً، هذا المنيو متوقف حالياً. يرجى تواصل إدارة المطعم مع مزود الخدمة لتجديد الاشتراك.
+          </p>
+          {isSubscriptionExpired && (
+            <p className='mt-2 text-sm text-amber-700 bg-amber-50 px-4 py-2 rounded-lg'>
+              انتهى الاشتراك في {new Date(restaurant.subscription_ends_at!).toLocaleDateString('ar-SA')}
+            </p>
+          )}
+          <p className='mt-4 text-sm text-slate-500'>
+            إذا كنت مالك هذا المطعم، يرجى تسجيل الدخول إلى لوحة التحكم لتجديد الاشتراك.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
   const logoUrl = getMenuImageUrl(data.branding?.logo_path)
   const heroImage = bannerUrls[bannerIndex]
   const mapUrl =

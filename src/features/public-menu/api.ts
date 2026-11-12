@@ -43,6 +43,8 @@ export interface PublicRestaurant {
   instagram_url: string | null
   facebook_url: string | null
   tiktok_url: string | null
+  is_active: boolean
+  subscription_ends_at: string | null
 }
 
 export interface OperatingHours {
@@ -221,14 +223,29 @@ export function usePublicMenu(restaurantSlug: string) {
       const { data: restaurant, error: restaurantError } = await supabase
         .from('restaurants')
         .select(
-          'id, slug, name, name_ar, description, is_open, google_maps_url, waze_url, whatsapp_number, website_url, instagram_url, facebook_url, tiktok_url'
+          'id, slug, name, name_ar, description, is_open, is_active, subscription_ends_at, google_maps_url, waze_url, whatsapp_number, website_url, instagram_url, facebook_url, tiktok_url'
         )
         .eq('slug', restaurantSlug)
-        .eq('is_active', true)
         .single()
 
       if (restaurantError || !restaurant) {
         throw new Error('لم يتم العثور على هذا المطعم.')
+      }
+
+      // Check if restaurant is inactive or subscription expired
+      const isInactive = restaurant.is_active === false
+      const isSubscriptionExpired = restaurant.subscription_ends_at && new Date(restaurant.subscription_ends_at) < new Date()
+
+      if (isInactive || isSubscriptionExpired) {
+        // Return minimal data for inactive/expired restaurant
+        return {
+          restaurant: restaurant as PublicRestaurant,
+          operatingHours: [],
+          branding: null,
+          categories: [],
+          itemOffers: {},
+          orderOffers: [],
+        }
       }
 
       const [

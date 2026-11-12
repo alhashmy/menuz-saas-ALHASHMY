@@ -8,6 +8,7 @@ import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
 import { AppSidebar } from '@/components/layout/app-sidebar'
 import { SkipToMain } from '@/components/skip-to-main'
 import { OrderNotificationListener } from '@/features/notifications/order-notification-listener'
+import { NotificationBanner } from '@/components/notification-banner'
 
 type AuthenticatedLayoutProps = {
   children?: React.ReactNode
@@ -21,6 +22,7 @@ export function AuthenticatedLayout({ children }: AuthenticatedLayoutProps) {
       <LayoutProvider>
         <SidebarProvider defaultOpen={defaultOpen}>
           <OrderNotificationListener />
+          <NotificationBanner />
           <SkipToMain />
           <AppSidebar />
           <SidebarInset
