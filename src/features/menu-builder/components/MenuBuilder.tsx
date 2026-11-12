@@ -17,7 +17,6 @@ import { useLanguage } from '@/i18n'
 import { useMenuBuilderStore } from '../store'
 import type { MenuStyle } from '../types'
 import { FloatingToolbar, MENU_THEMES } from './FloatingToolbar'
-import { OperationsSettings } from './OperationsSettings'
 
 export function MenuBuilder() {
   const { language, direction } = useLanguage()
@@ -328,10 +327,9 @@ export function MenuBuilder() {
               )}
             </div>
           </section>
-          <OperationsSettings restaurantId={useAuthStore.getState().restaurant?.id ?? null} />
-        </section>
+          </section>
 
-        <aside className='space-y-4'>
+          <aside className='space-y-4'>
           <section className='rounded-2xl border border-white/8 bg-white/[0.035] p-4'>
             <div className='flex items-center gap-2'>
               <PackageOpen className='size-4 text-emerald-300' />

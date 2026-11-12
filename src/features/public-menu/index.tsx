@@ -145,6 +145,14 @@ export function PublicMenu({ restaurantSlug }: PublicMenuProps) {
     return () => observers.forEach((observer) => observer.disconnect())
   }, [data?.categories, template.id])
 
+  // Update document.title dynamically when restaurant data loads
+  useEffect(() => {
+    if (data?.restaurant) {
+      const restaurantName = data.restaurant.name_ar ?? data.restaurant.name
+      document.title = `${restaurantName} - منيو رقمي | Menuz`
+    }
+  }, [data?.restaurant])
+
   const categories = useMemo(() => {
     if (!data) return []
     const normalizedQuery = query.trim().toLocaleLowerCase('ar-IQ')

@@ -14,8 +14,6 @@ import {
   Copy,
   ExternalLink,
   Pencil,
-  MapPin,
-  Phone,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { uploadMenuImage, getMenuImageUrl, supabase } from '@/lib/supabase'
@@ -158,15 +156,11 @@ export function FloatingToolbar({ embedded = false }: FloatingToolbarProps) {
     setRestaurantName,
     setRestaurantDescription,
     setRestaurantLogoUrl,
-    setGoogleMapsUrl,
-    setWazeUrl,
     restaurantId,
     restaurantSlug,
     restaurantName,
     restaurantDescription,
     restaurantLogoUrl,
-    googleMapsUrl,
-    wazeUrl,
   } = useMenuBuilderStore()
   const { categories } = useMenuBuilderStore()
   const templateLocked = isLockedMenuTemplate(style.menuTemplate)
@@ -638,30 +632,6 @@ export function FloatingToolbar({ embedded = false }: FloatingToolbarProps) {
                 </div>
               </div>
 
-              <div className='space-y-1'>
-                <Label className='flex items-center gap-2 text-[10px] text-slate-400'>
-                  <Phone className='size-3.5' /> خدمة العملاء (واتساب)
-                </Label>
-                <Input
-                  value={wazeUrl ?? ''}
-                  onChange={(e) => setWazeUrl(e.target.value || null)}
-                  placeholder='رقم واتساب أو رابط'
-                  className='border-slate-700 bg-slate-900/50 text-xs text-slate-100 placeholder-slate-500'
-                />
-              </div>
-
-              <div className='space-y-1'>
-                <Label className='flex items-center gap-2 text-[10px] text-slate-400'>
-                  <MapPin className='size-3.5' /> جوجل مابس / Waze
-                </Label>
-                <Input
-                  value={googleMapsUrl ?? ''}
-                  onChange={(e) => setGoogleMapsUrl(e.target.value || null)}
-                  placeholder='رابط موقع المطعم'
-                  className='border-slate-700 bg-slate-900/50 text-xs text-slate-100 placeholder-slate-500'
-                />
-              </div>
-
               <div className='flex items-center gap-2'>
                 <Switch checked={style.isOpen} onCheckedChange={setIsOpen} />
                 <span className='text-xs text-slate-300'>
@@ -704,21 +674,6 @@ export function FloatingToolbar({ embedded = false }: FloatingToolbarProps) {
               </div>
               <p className='text-[10px] leading-4 text-slate-500'>خط متحرك ناعم ينتقل بين اللونين اللذين اخترتهما.</p>
               {style.neonLineEnabled && <p className='text-[10px] text-cyan-200/70'>يظهر تلقائيًا أعلى وأسفل المنيو بالكامل.</p>}
-            </div>
-
-            <div className='space-y-2 rounded-xl border border-white/8 bg-slate-950/25 p-2'>
-              <span className='block text-[10px] font-bold tracking-wider text-slate-400 uppercase'>التواصل الاجتماعي</span>
-              {(['whatsapp', 'instagram', 'facebook', 'tiktok'] as const).map((network) => (
-                <div key={network} className='grid grid-cols-[1fr_auto] items-center gap-2'>
-                  <Input
-                    value={style.socialLinks[network]}
-                    onChange={(event) => setMenuStyle({ socialLinks: { ...style.socialLinks, [network]: event.target.value } })}
-                    placeholder={network === 'whatsapp' ? 'رابط أو رقم واتساب' : network + '.com/...'}
-                    className='h-8 border-slate-700 bg-slate-900/50 text-[10px] text-slate-100'
-                  />
-                  <Switch checked={style.socialVisibility[network]} onCheckedChange={(checked) => setMenuStyle({ socialVisibility: { ...style.socialVisibility, [network]: checked } })} />
-                </div>
-              ))}
             </div>
 
             <div className='space-y-2 rounded-xl border border-orange-300/15 bg-orange-300/5 p-2'>
