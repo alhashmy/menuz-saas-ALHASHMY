@@ -1,12 +1,1 @@
-{
-  "rewrites": [
-    {
-      "source": "/menu/:slug",
-      "destination": "/api/menu-og?slug=:slug"
-    },
-    {
-      "source": "/((?!api/).*)",
-      "destination": "/index.html"
-    }
-  ]
-}
+{"rewrites":[{"source":"/(.*)","destination":"/index.html"}]}
