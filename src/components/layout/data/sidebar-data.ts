@@ -53,13 +53,8 @@ export function createSidebarData(t: Translate): SidebarData {
         items: [
           {
             title: t('nav.settings'),
+            url: '/settings',
             icon: Settings,
-            items: [
-              {
-                title: t('nav.orderSettings'),
-                url: '/settings/restaurant-ordering',
-              },
-            ],
           },
         ],
       },

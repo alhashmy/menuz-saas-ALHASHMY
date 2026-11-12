@@ -49,7 +49,7 @@ export function AppsPage() {
 
   function handleAppAction(id: AppId) {
     if (id === 'whatsapp') {
-      navigate({ to: '/settings/restaurant-ordering' })
+      navigate({ to: '/settings' })
       return
     }
     toggleApp(id)
