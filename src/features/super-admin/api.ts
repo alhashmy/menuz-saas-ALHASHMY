@@ -184,7 +184,7 @@ export async function fetchConversations(): Promise<PlatformNotification[]> {
     .from('platform_notifications')
     .select(`
       id, restaurant_id, admin_id, title, message, type, contact_url, is_read, read_at, created_at,
-      sender_role, sender_id, sender_email,
+      sender_role, sender_id, sender_email, sender_name,
       restaurant:restaurants(id, slug, name, name_ar, owner_email, is_active, subscription_ends_at, created_at)
     `)
     .order('created_at', { ascending: false })
@@ -207,6 +207,7 @@ export async function fetchConversations(): Promise<PlatformNotification[]> {
     sender_role: 'admin' | 'restaurant' | null
     sender_id: string | null
     sender_email: string | null
+    sender_name: string | null
     restaurant: Array<{
       id: string
       slug: string
@@ -224,7 +225,8 @@ export async function fetchConversations(): Promise<PlatformNotification[]> {
     sender_role: notification.sender_role ?? (notification.admin_id ? 'admin' : 'restaurant'),
     sender_id: notification.sender_id ?? notification.admin_id ?? '',
     sender_email: notification.sender_email ?? (notification.admin_id ? 'الإدارة' : 'المطعم'),
-    restaurant: notification.restaurant?.[0] ?? null,
+    sender_name: notification.sender_name ?? null,
+    restaurant: notification.restaurant?.[0] ?? undefined,
   })) as PlatformNotification[]
 }
 
@@ -642,6 +644,7 @@ export function useSendNotification() {
           sender_role: 'admin',
           sender_id: user?.id,
           sender_email: user?.email,
+          sender_name: 'الإدارة',
         })
 
       if (error) throw error
@@ -663,6 +666,7 @@ export interface ReplyToRestaurantInput {
   message: string
   type?: 'subscription_warning' | 'urgent' | 'info' | 'chat'
   contact_url?: string
+  sender_name?: string
 }
 
 export function useReplyToRestaurant() {
@@ -683,6 +687,7 @@ export function useReplyToRestaurant() {
           sender_role: 'admin',
           sender_id: user?.id,
           sender_email: user?.email,
+          sender_name: input.sender_name || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'الإدارة',
         })
 
       if (error) throw error

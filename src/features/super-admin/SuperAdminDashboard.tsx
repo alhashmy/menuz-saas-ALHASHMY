@@ -1,5 +1,6 @@
-import { useState } from 'react'
-import { Plus, Eye, Trash2, Users, Activity, AlertCircle, CheckCircle, XCircle, Loader2, Shield, Bell, Mail, UserPlus, UserCheck, UserX, MessageSquare, Calendar, UtensilsCrossed, KeyRound, Copy, Eye as EyeIcon, EyeOff, ShieldCheck, RotateCcw, Send, Reply, ExternalLink } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { useNavigate } from '@tanstack/react-router'
+import { Plus, Eye, Trash2, Users, Activity, AlertCircle, CheckCircle, XCircle, Loader2, Shield, Bell, Mail, UserPlus, UserCheck, UserX, MessageSquare, Calendar, UtensilsCrossed, KeyRound, Copy, Eye as EyeIcon, EyeOff, ShieldCheck, RotateCcw, Send, Reply, ExternalLink, MessageCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -26,6 +27,7 @@ import { format } from 'date-fns'
 import { ar } from 'date-fns/locale'
 import { useAuthStore } from '@/stores/auth-store'
 import { toast } from 'sonner'
+import { supabase } from '@/lib/supabase'
 import {
   useRestaurants,
   useSuperAdminStats,
@@ -220,6 +222,7 @@ function ActionCell({
   onDelete,
   isDeletePending,
   onSendNotification,
+  onOpenChat,
   onResetPassword,
   isResetPasswordPending,
   isRootOwner,
@@ -228,6 +231,7 @@ function ActionCell({
   onDelete: () => void
   isDeletePending: boolean
   onSendNotification: () => void
+  onOpenChat: () => void
   onResetPassword: () => void
   isResetPasswordPending: boolean
   isRootOwner: boolean
@@ -249,6 +253,15 @@ function ActionCell({
         title='إرسال تنبيه / تواصل'
       >
         <MessageSquare className='size-4 text-blue-600' />
+      </Button>
+      <Button
+        variant='ghost'
+        size='icon'
+        onClick={onOpenChat}
+        title='فتح المحادثة المباشرة'
+        className='text-emerald-600 hover:bg-emerald-50'
+      >
+        <MessageCircle className='size-4' />
       </Button>
       {isRootOwner && (
         <>
@@ -336,6 +349,7 @@ function AdminActionCell({
 }
 
 export function SuperAdminDashboard() {
+  const navigate = useNavigate()
   const { user } = useAuthStore()
   const superAdminEmail = import.meta.env.VITE_SUPER_ADMIN_EMAIL
   const userEmail = user?.email
@@ -364,7 +378,7 @@ export function SuperAdminDashboard() {
   const markPasswordAuditReadMutation = useMarkPasswordAuditRead()
   const rootChangeOwnPasswordMutation = useRootChangeOwnPassword()
 
-  const [activeTab, setActiveTab] = useState<'restaurants' | 'admins' | 'notifications' | 'password-audit'>('restaurants')
+  const [activeTab, setActiveTab] = useState<'restaurants' | 'admins' | 'notifications' | 'conversations' | 'password-audit'>('restaurants')
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [notificationDialogOpen, setNotificationDialogOpen] = useState<{ open: boolean; restaurant?: Restaurant }>({ open: false })
   const [replyDialogOpen, setReplyDialogOpen] = useState<{ open: boolean; conversation?: PlatformNotification }>({ open: false })
@@ -409,6 +423,7 @@ export function SuperAdminDashboard() {
   const [showRootNewPassword, setShowRootNewPassword] = useState(false)
   const [showRootConfirmPassword, setShowRootConfirmPassword] = useState(false)
   const [rootOwnPasswordErrors, setRootOwnPasswordErrors] = useState<{ newPassword?: string; confirmPassword?: string }>({})
+  const [typingRestaurants, setTypingRestaurants] = useState<Record<string, string>>({}) // restaurantId -> typing text
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -436,11 +451,16 @@ export function SuperAdminDashboard() {
     e.preventDefault()
     if (!replyFormData.message.trim() || !replyDialogOpen.conversation) return
 
+    // Get admin display name
+    const { data: adminDisplayName } = await supabase.rpc('get_current_admin_display_name')
+    const senderName = adminDisplayName || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'الإدارة'
+
     await replyToRestaurantMutation.mutateAsync({
       restaurant_id: replyDialogOpen.conversation.restaurant_id,
       message: replyFormData.message.trim(),
       type: replyFormData.type,
       contact_url: replyFormData.contact_url || undefined,
+      sender_name: senderName,
     })
     setReplyDialogOpen({ open: false })
     setReplyFormData({ message: '', type: 'chat', contact_url: '' })
@@ -574,6 +594,43 @@ export function SuperAdminDashboard() {
     navigator.clipboard.writeText(text)
     toast.success('تم نسخ كلمة المرور')
   }
+
+  // Subscribe to live typing broadcasts for restaurants with unread messages
+  useEffect(() => {
+    if (activeTab !== 'conversations') return
+
+    const restaurantsWithUnread = conversations
+      .filter((c) => c.sender_role === 'restaurant' && !c.is_read && c.restaurant_id)
+      .map((c) => c.restaurant_id!)
+      .filter((id, index, arr) => arr.indexOf(id) === index)
+      .slice(0, 10) // Limit to 10 restaurants to avoid too many channels
+
+    const channels: ReturnType<typeof supabase.channel>[] = []
+
+    restaurantsWithUnread.forEach((restaurantId) => {
+      const channel = supabase.channel(`support-live:${restaurantId}`, {
+        config: { broadcast: { self: false, ack: false } },
+      })
+
+      channel.on('broadcast', { event: 'typing' }, (payload) => {
+        const text = payload.payload?.text as string
+        setTypingRestaurants((prev) => {
+          if (!text || text.length === 0) {
+            const { [restaurantId]: _, ...rest } = prev
+            return rest
+          }
+          return { ...prev, [restaurantId]: text }
+        })
+      })
+
+      channel.subscribe()
+      channels.push(channel)
+    })
+
+    return () => {
+      channels.forEach((ch) => supabase.removeChannel(ch))
+    }
+  }, [activeTab, conversations])
 
   return (
     <div className='space-y-6'>
@@ -894,6 +951,7 @@ export function SuperAdminDashboard() {
                                 onDelete={() => handleDelete(restaurant.id)}
                                 isDeletePending={isPendingDelete}
                                 onSendNotification={() => openNotificationModal(restaurant)}
+                                onOpenChat={() => navigate({ to: `/super-admin/chat/${restaurant.id}` })}
                                 onResetPassword={() => openResetPasswordDialog(restaurant.owner_id, restaurant.owner_email || '', restaurant.name, 'restaurant')}
                                 isResetPasswordPending={rootResetPasswordMutation.isPending && rootResetPasswordMutation.variables?.targetUserId === restaurant.owner_id}
                                 isRootOwner={isRootOwner}
@@ -1128,7 +1186,7 @@ export function SuperAdminDashboard() {
         </TabsContent>
 
         <TabsContent value='conversations' className='mt-4'>
-          <div className='grid gap-4 md:grid-cols-4'>
+          <div className='grid gap-4 md:grid-cols-5'>
             <Card>
               <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
                 <CardTitle className='text-sm font-medium text-muted-foreground'>إجمالي المحادثات</CardTitle>
@@ -1173,6 +1231,29 @@ export function SuperAdminDashboard() {
                   {conversations.filter((c) => c.sender_role === 'admin').length}
                 </div>
                 <p className='text-xs text-muted-foreground'>تم إرسالها</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
+                <CardTitle className='text-sm font-medium text-muted-foreground'>يكتبون الآن</CardTitle>
+                <MessageCircle className='size-4 text-blue-600 animate-pulse' />
+              </CardHeader>
+              <CardContent>
+                <div className='text-2xl font-bold text-blue-600'>{Object.keys(typingRestaurants).length}</div>
+                <p className='text-xs text-muted-foreground'>مطعم يكتب حالياً</p>
+                {Object.entries(typingRestaurants).length > 0 && (
+                  <div className='mt-2 space-y-1 max-h-20 overflow-auto'>
+                    {Object.entries(typingRestaurants).map(([restaurantId, text]) => {
+                      const restaurant = conversations.find((c) => c.restaurant_id === restaurantId)?.restaurant
+                      return (
+                        <div key={restaurantId} className='text-xs text-blue-700 bg-blue-50 px-2 py-1 rounded'>
+                          <span className='font-medium'>{restaurant?.name ?? restaurantId.slice(0, 8)}</span>
+                          <span className='text-blue-500 ml-1'>{text.slice(0, 30)}{text.length > 30 ? '...' : ''}</span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
@@ -1266,6 +1347,17 @@ export function SuperAdminDashboard() {
                                   >
                                     <Reply className='size-3' />
                                     رد
+                                  </Button>
+                                )}
+                                {conversation.restaurant && (
+                                  <Button
+                                    variant='ghost'
+                                    size='icon'
+                                    onClick={() => navigate({ to: `/super-admin/chat/${conversation.restaurant!.id}` })}
+                                    className='h-8 w-8 text-emerald-600 hover:bg-emerald-50'
+                                    title='فتح المحادثة المباشرة'
+                                  >
+                                    <MessageCircle className='size-4' />
                                   </Button>
                                 )}
                                 {conversation.contact_url && (

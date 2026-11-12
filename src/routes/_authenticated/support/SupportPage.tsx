@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/stores/auth-store'
@@ -19,6 +19,7 @@ interface SupportMessage {
   sender_role: 'admin' | 'restaurant'
   sender_id: string
   sender_email: string
+  sender_name: string | null
   title: string
   message: string
   type: 'subscription_warning' | 'urgent' | 'info' | 'chat'
@@ -35,6 +36,25 @@ const TYPE_CONFIG = {
   chat: { label: 'تواصل', icon: MessageSquare, color: 'bg-emerald-100 text-emerald-800 border-emerald-200' },
 } as const
 
+function throttle(fn: (text: string) => void, delay: number): (text: string) => void {
+  let timeoutId: ReturnType<typeof setTimeout> | null = null
+  let lastArgs: string | null = null
+
+  return ((text: string) => {
+    lastArgs = text
+    if (timeoutId === null) {
+      fn(text)
+      timeoutId = setTimeout(() => {
+        timeoutId = null
+        if (lastArgs !== null) {
+          fn(lastArgs)
+          lastArgs = null
+        }
+      }, delay)
+    }
+  })
+}
+
 export function SupportPage() {
   const navigate = useNavigate()
   const { user, restaurant, markNotificationRead, loadNotifications } = useAuthStore()
@@ -43,6 +63,37 @@ export function SupportPage() {
   const [isSending, setIsSending] = useState(false)
   const [newMessage, setNewMessage] = useState('')
   const [showAlert, setShowAlert] = useState(true)
+  const broadcastChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
+
+  // Initialize broadcast channel for live typing preview
+  useEffect(() => {
+    if (!restaurant?.id) return
+
+    const channel = supabase.channel(`support-live:${restaurant.id}`, {
+      config: {
+        broadcast: { self: false, ack: false },
+      },
+    })
+
+    channel.subscribe()
+    broadcastChannelRef.current = channel
+
+    return () => {
+      supabase.removeChannel(channel)
+      broadcastChannelRef.current = null
+    }
+  }, [restaurant?.id])
+
+  // Throttled broadcast function
+  const broadcastTyping = useRef(
+    throttle((text: string) => {
+      broadcastChannelRef.current?.send({
+        type: 'broadcast',
+        event: 'typing',
+        payload: { text },
+      })
+    }, 150)
+  ).current
 
   const fetchMessages = useCallback(async () => {
     if (!restaurant?.id) return
@@ -52,7 +103,7 @@ export function SupportPage() {
 
     const { data, error } = await supabase
       .from('platform_notifications')
-      .select('id, restaurant_id, admin_id, title, message, type, contact_url, is_read, read_at, created_at')
+      .select('id, restaurant_id, admin_id, title, message, type, contact_url, is_read, read_at, created_at, sender_role, sender_id, sender_email, sender_name')
       .eq('restaurant_id', restaurant.id)
       .gte('created_at', new Date(twentyFourHoursAgo).toISOString())
       .order('created_at', { ascending: true })
@@ -64,13 +115,49 @@ export function SupportPage() {
 
     const formattedMessages = (data ?? []).map((msg) => ({
       ...msg,
-      sender_role: msg.admin_id ? 'admin' as const : 'restaurant' as const,
-      sender_id: msg.admin_id || user?.id || '',
-      sender_email: msg.admin_id ? 'الإدارة' : user?.email || '',
+      sender_role: msg.sender_role ?? (msg.admin_id ? 'admin' as const : 'restaurant' as const),
+      sender_id: msg.sender_id ?? msg.admin_id ?? user?.id ?? '',
+      sender_email: msg.sender_email ?? (msg.admin_id ? 'الإدارة' : user?.email ?? ''),
+      sender_name: msg.sender_name ?? null,
     })) as SupportMessage[]
 
     setMessages(formattedMessages)
     setIsLoading(false)
+  }, [restaurant?.id, user?.id, user?.email])
+
+  // Realtime subscription for new messages
+  useEffect(() => {
+    if (!restaurant?.id) return
+
+    const channel = supabase
+      .channel(`support-messages:${restaurant.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'platform_notifications',
+          filter: `restaurant_id=eq.${restaurant.id}`,
+        },
+        (payload) => {
+          const newMsg = payload.new as SupportMessage
+          setMessages((prev) => {
+            if (prev.some((m) => m.id === newMsg.id)) return prev
+            return [...prev, {
+              ...newMsg,
+              sender_role: newMsg.sender_role ?? (newMsg.admin_id ? 'admin' as const : 'restaurant' as const),
+              sender_id: newMsg.sender_id ?? newMsg.admin_id ?? user?.id ?? '',
+              sender_email: newMsg.sender_email ?? (newMsg.admin_id ? 'الإدارة' : user?.email ?? ''),
+              sender_name: newMsg.sender_name ?? null,
+            }]
+          })
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
   }, [restaurant?.id, user?.id, user?.email])
 
   useEffect(() => {
@@ -103,12 +190,14 @@ export function SupportPage() {
         sender_role: 'restaurant',
         sender_id: user.id,
         sender_email: user.email,
+        sender_name: 'المطعم',
       })
 
       if (error) throw error
 
       toast.success('تم إرسال الرسالة بنجاح')
       setNewMessage('')
+      broadcastTyping('')
       await fetchMessages()
       await loadNotifications()
     } catch (error) {
@@ -116,6 +205,12 @@ export function SupportPage() {
     } finally {
       setIsSending(false)
     }
+  }
+
+  const handleMessageChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const value = e.target.value
+    setNewMessage(value)
+    broadcastTyping(value)
   }
 
   const handleOpenContactUrl = (url: string) => {
@@ -198,6 +293,7 @@ export function SupportPage() {
                 const config = TYPE_CONFIG[msg.type]
                 const Icon = config.icon
                 const isOwn = msg.sender_role === 'restaurant'
+                const senderDisplayName = isOwn ? 'أنت' : (msg.sender_name ?? msg.sender_email ?? 'الإدارة')
 
                 return (
                   <div
@@ -224,9 +320,7 @@ export function SupportPage() {
                       )}
                     >
                       <div className='flex items-center justify-between gap-2 mb-2'>
-                        <span className='font-medium text-sm'>
-                          {isOwn ? 'أنت' : 'الإدارة'}
-                        </span>
+                        <span className='font-medium text-sm'>{senderDisplayName}</span>
                         <Badge variant='outline' className={cn('text-xs', config.color)}>
                           {config.label}
                         </Badge>
@@ -278,7 +372,7 @@ export function SupportPage() {
                 id='support-message'
                 placeholder='اكتب رسالتك أو استفسارك هنا... سيتم إرساله مباشرة إلى فريق الدعم الفني.'
                 value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
+                onChange={handleMessageChange}
                 rows={3}
                 className='resize-none'
               />

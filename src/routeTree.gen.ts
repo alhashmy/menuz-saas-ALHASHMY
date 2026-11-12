@@ -41,6 +41,7 @@ import { Route as AuthenticatedAnalyticsIndexRouteImport } from './routes/_authe
 import { Route as AuthenticatedSettingsDisplayRouteImport } from './routes/_authenticated/settings/display'
 import { Route as AuthenticatedSettingsAppearanceRouteImport } from './routes/_authenticated/settings/appearance'
 import { Route as AuthenticatedErrorsErrorRouteImport } from './routes/_authenticated/errors/$error'
+import { Route as AuthenticatedSuperAdminChatRestaurantIdRouteImport } from './routes/_authenticated/super-admin/chat/$restaurantId'
 
 const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
   id: '/_authenticated',
@@ -217,6 +218,12 @@ const AuthenticatedErrorsErrorRoute =
     path: '/errors/$error',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedSuperAdminChatRestaurantIdRoute =
+  AuthenticatedSuperAdminChatRestaurantIdRouteImport.update({
+    id: '/super-admin/chat/$restaurantId',
+    path: '/super-admin/chat/$restaurantId',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -250,6 +257,7 @@ export interface FileRoutesByFullPath {
   '/super-admin/': typeof AuthenticatedSuperAdminIndexRoute
   '/support/': typeof AuthenticatedSupportIndexRoute
   '/tables/': typeof AuthenticatedTablesIndexRoute
+  '/super-admin/chat/$restaurantId': typeof AuthenticatedSuperAdminChatRestaurantIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -282,6 +290,7 @@ export interface FileRoutesByTo {
   '/super-admin': typeof AuthenticatedSuperAdminIndexRoute
   '/support': typeof AuthenticatedSupportIndexRoute
   '/tables': typeof AuthenticatedTablesIndexRoute
+  '/super-admin/chat/$restaurantId': typeof AuthenticatedSuperAdminChatRestaurantIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -317,6 +326,7 @@ export interface FileRoutesById {
   '/_authenticated/super-admin/': typeof AuthenticatedSuperAdminIndexRoute
   '/_authenticated/support/': typeof AuthenticatedSupportIndexRoute
   '/_authenticated/tables/': typeof AuthenticatedTablesIndexRoute
+  '/_authenticated/super-admin/chat/$restaurantId': typeof AuthenticatedSuperAdminChatRestaurantIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -352,6 +362,7 @@ export interface FileRouteTypes {
     | '/super-admin/'
     | '/support/'
     | '/tables/'
+    | '/super-admin/chat/$restaurantId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -384,6 +395,7 @@ export interface FileRouteTypes {
     | '/super-admin'
     | '/support'
     | '/tables'
+    | '/super-admin/chat/$restaurantId'
   id:
     | '__root__'
     | '/'
@@ -418,6 +430,7 @@ export interface FileRouteTypes {
     | '/_authenticated/super-admin/'
     | '/_authenticated/support/'
     | '/_authenticated/tables/'
+    | '/_authenticated/super-admin/chat/$restaurantId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -662,6 +675,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedErrorsErrorRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/super-admin/chat/$restaurantId': {
+      id: '/_authenticated/super-admin/chat/$restaurantId'
+      path: '/super-admin/chat/$restaurantId'
+      fullPath: '/super-admin/chat/$restaurantId'
+      preLoaderRoute: typeof AuthenticatedSuperAdminChatRestaurantIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
   }
 }
 
@@ -700,6 +720,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedSuperAdminIndexRoute: typeof AuthenticatedSuperAdminIndexRoute
   AuthenticatedSupportIndexRoute: typeof AuthenticatedSupportIndexRoute
   AuthenticatedTablesIndexRoute: typeof AuthenticatedTablesIndexRoute
+  AuthenticatedSuperAdminChatRestaurantIdRoute: typeof AuthenticatedSuperAdminChatRestaurantIdRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -719,6 +740,8 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedSuperAdminIndexRoute: AuthenticatedSuperAdminIndexRoute,
   AuthenticatedSupportIndexRoute: AuthenticatedSupportIndexRoute,
   AuthenticatedTablesIndexRoute: AuthenticatedTablesIndexRoute,
+  AuthenticatedSuperAdminChatRestaurantIdRoute:
+    AuthenticatedSuperAdminChatRestaurantIdRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =

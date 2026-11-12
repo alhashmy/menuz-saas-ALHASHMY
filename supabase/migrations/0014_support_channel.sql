@@ -11,7 +11,8 @@
 ALTER TABLE public.platform_notifications
   ADD COLUMN IF NOT EXISTS sender_role TEXT CHECK (sender_role IN ('admin', 'restaurant')),
   ADD COLUMN IF NOT EXISTS sender_id UUID,
-  ADD COLUMN IF NOT EXISTS sender_email TEXT;
+  ADD COLUMN IF NOT EXISTS sender_email TEXT,
+  ADD COLUMN IF NOT EXISTS sender_name TEXT;
 
 -- Add index for filtering by sender_role
 CREATE INDEX IF NOT EXISTS idx_platform_notifications_sender_role
@@ -35,6 +36,10 @@ SET
   sender_email = CASE
     WHEN admin_id IS NOT NULL THEN 'الإدارة'
     ELSE 'المطعم'
+  END,
+  sender_name = CASE
+    WHEN admin_id IS NOT NULL THEN 'الإدارة'
+    ELSE 'المطعم'
   END
 WHERE sender_role IS NULL;
 
@@ -43,13 +48,15 @@ UPDATE public.platform_notifications
 SET
   sender_role = COALESCE(sender_role, CASE WHEN admin_id IS NOT NULL THEN 'admin' ELSE 'restaurant' END),
   sender_id = COALESCE(sender_id, admin_id, '00000000-0000-0000-0000-000000000000'::uuid),
-  sender_email = COALESCE(sender_email, 'alhashmy@manger.iq')
-WHERE sender_role IS NULL OR sender_id IS NULL OR sender_email IS NULL;
+  sender_email = COALESCE(sender_email, 'alhashmy@manger.iq'),
+  sender_name = COALESCE(sender_name, CASE WHEN admin_id IS NOT NULL THEN 'الإدارة' ELSE 'المطعم' END)
+WHERE sender_role IS NULL OR sender_id IS NULL OR sender_email IS NULL OR sender_name IS NULL;
 
 ALTER TABLE public.platform_notifications
   ALTER COLUMN sender_role SET NOT NULL,
   ALTER COLUMN sender_id SET NOT NULL,
-  ALTER COLUMN sender_email SET NOT NULL;
+  ALTER COLUMN sender_email SET NOT NULL,
+  ALTER COLUMN sender_name SET NOT NULL;
 
 -- ============================================================
 -- 3. UPDATE RLS POLICIES FOR NEW COLUMNS
@@ -63,6 +70,7 @@ CREATE POLICY "restaurant staff can insert own messages"
     AND sender_role = 'restaurant'
     AND sender_id = auth.uid()
     AND sender_email = auth.jwt() ->> 'email'
+    AND sender_name = 'المطعم'
   );
 
 -- Restaurant staff can read all messages for their restaurant (both directions)
@@ -110,7 +118,42 @@ CREATE POLICY "platform_admin can update notifications"
   WITH CHECK (public.is_platform_admin());
 
 -- ============================================================
--- 4. HELPER FUNCTION: Get conversation stats for a restaurant
+-- 4. HELPER FUNCTION: Get current admin's display name
+-- ============================================================
+CREATE OR REPLACE FUNCTION public.get_current_admin_display_name()
+RETURNS TEXT
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_user_id UUID := auth.uid();
+  v_full_name TEXT;
+  v_email TEXT := auth.jwt() ->> 'email';
+BEGIN
+  -- Try to get full_name from platform_admins
+  SELECT full_name INTO v_full_name
+  FROM public.platform_admins
+  WHERE user_id = v_user_id AND is_active = true
+  LIMIT 1;
+  
+  IF v_full_name IS NOT NULL THEN
+    RETURN v_full_name;
+  END IF;
+  
+  -- Fallback to user_metadata
+  SELECT (auth.jwt() -> 'user_metadata' ->> 'full_name') INTO v_full_name;
+  IF v_full_name IS NOT NULL THEN
+    RETURN v_full_name;
+  END IF;
+  
+  -- Final fallback to email prefix
+  RETURN split_part(v_email, '@', 1);
+END;
+$$;
+
+-- ============================================================
+-- 5. HELPER FUNCTION: Get conversation stats for a restaurant
 -- ============================================================
 CREATE OR REPLACE FUNCTION public.get_restaurant_conversation_stats(p_restaurant_id UUID)
 RETURNS TABLE (
@@ -134,7 +177,7 @@ AS $$
 $$;
 
 -- ============================================================
--- 5. HELPER FUNCTION: Get platform-wide conversation stats (admin)
+-- 6. HELPER FUNCTION: Get platform-wide conversation stats (admin)
 -- ============================================================
 CREATE OR REPLACE FUNCTION public.get_platform_conversation_stats()
 RETURNS TABLE (
@@ -159,7 +202,7 @@ AS $$
 $$;
 
 -- ============================================================
--- 6. VIEW: Conversation stats for super admin dashboard
+-- 7. VIEW: Conversation stats for super admin dashboard
 -- ============================================================
 DROP VIEW IF EXISTS public.platform_conversation_stats CASCADE;
 CREATE VIEW public.platform_conversation_stats AS
@@ -175,7 +218,7 @@ FROM public.platform_notifications;
 GRANT SELECT ON public.platform_conversation_stats TO authenticated;
 
 -- ============================================================
--- 7. VIEW: Restaurant conversation summary (for restaurant owners)
+-- 8. VIEW: Restaurant conversation summary (for restaurant owners)
 -- ============================================================
 DROP VIEW IF EXISTS public.restaurant_conversation_summary CASCADE;
 CREATE VIEW public.restaurant_conversation_summary AS
@@ -195,8 +238,10 @@ GRANT SELECT ON public.restaurant_conversation_summary TO authenticated;
 -- NOTES:
 -- - This migration adds sender tracking to distinguish between
 --   admin->restaurant and restaurant->admin messages
+-- - Added sender_name column for displaying actual admin names in chat
 -- - Restaurant owners can now send messages via /support page
 -- - Super admins can view all conversations in "الإشعارات والتواصل" tab
 -- - 24-hour filter applies only to restaurant view (/support)
 -- - Admin view shows all messages permanently
+-- - Live typing preview via Supabase Realtime Broadcast on channel `support-live:${restaurantId}`
 -- ============================================================
