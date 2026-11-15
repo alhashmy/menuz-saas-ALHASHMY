@@ -9,6 +9,7 @@ import {
   Layout,
   LayoutDashboard,
   LayoutGrid,
+  MapPin,
   Settings,
   Shield,
   Users,
@@ -119,6 +120,11 @@ export function createSidebarData({
           title: 'لوحة الإدارة العليا',
           url: '/super-admin',
           icon: Shield,
+        },
+        {
+          title: 'إدارة التوصيل والمناطق',
+          url: '/super-admin/delivery',
+          icon: MapPin,
         },
       ],
     })

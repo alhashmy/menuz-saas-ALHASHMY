@@ -41,6 +41,7 @@ import { Route as AuthenticatedAnalyticsIndexRouteImport } from './routes/_authe
 import { Route as AuthenticatedSettingsDisplayRouteImport } from './routes/_authenticated/settings/display'
 import { Route as AuthenticatedSettingsAppearanceRouteImport } from './routes/_authenticated/settings/appearance'
 import { Route as AuthenticatedErrorsErrorRouteImport } from './routes/_authenticated/errors/$error'
+import { Route as AuthenticatedSuperAdminDeliveryIndexRouteImport } from './routes/_authenticated/super-admin/delivery/index'
 import { Route as AuthenticatedSuperAdminChatRestaurantIdRouteImport } from './routes/_authenticated/super-admin/chat/$restaurantId'
 
 const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
@@ -218,6 +219,12 @@ const AuthenticatedErrorsErrorRoute =
     path: '/errors/$error',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedSuperAdminDeliveryIndexRoute =
+  AuthenticatedSuperAdminDeliveryIndexRouteImport.update({
+    id: '/super-admin/delivery/',
+    path: '/super-admin/delivery/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedSuperAdminChatRestaurantIdRoute =
   AuthenticatedSuperAdminChatRestaurantIdRouteImport.update({
     id: '/super-admin/chat/$restaurantId',
@@ -258,6 +265,7 @@ export interface FileRoutesByFullPath {
   '/support/': typeof AuthenticatedSupportIndexRoute
   '/tables/': typeof AuthenticatedTablesIndexRoute
   '/super-admin/chat/$restaurantId': typeof AuthenticatedSuperAdminChatRestaurantIdRoute
+  '/super-admin/delivery/': typeof AuthenticatedSuperAdminDeliveryIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -291,6 +299,7 @@ export interface FileRoutesByTo {
   '/support': typeof AuthenticatedSupportIndexRoute
   '/tables': typeof AuthenticatedTablesIndexRoute
   '/super-admin/chat/$restaurantId': typeof AuthenticatedSuperAdminChatRestaurantIdRoute
+  '/super-admin/delivery': typeof AuthenticatedSuperAdminDeliveryIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -327,6 +336,7 @@ export interface FileRoutesById {
   '/_authenticated/support/': typeof AuthenticatedSupportIndexRoute
   '/_authenticated/tables/': typeof AuthenticatedTablesIndexRoute
   '/_authenticated/super-admin/chat/$restaurantId': typeof AuthenticatedSuperAdminChatRestaurantIdRoute
+  '/_authenticated/super-admin/delivery/': typeof AuthenticatedSuperAdminDeliveryIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -363,6 +373,7 @@ export interface FileRouteTypes {
     | '/support/'
     | '/tables/'
     | '/super-admin/chat/$restaurantId'
+    | '/super-admin/delivery/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -396,6 +407,7 @@ export interface FileRouteTypes {
     | '/support'
     | '/tables'
     | '/super-admin/chat/$restaurantId'
+    | '/super-admin/delivery'
   id:
     | '__root__'
     | '/'
@@ -431,6 +443,7 @@ export interface FileRouteTypes {
     | '/_authenticated/support/'
     | '/_authenticated/tables/'
     | '/_authenticated/super-admin/chat/$restaurantId'
+    | '/_authenticated/super-admin/delivery/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -675,6 +688,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedErrorsErrorRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/super-admin/delivery/': {
+      id: '/_authenticated/super-admin/delivery/'
+      path: '/super-admin/delivery'
+      fullPath: '/super-admin/delivery/'
+      preLoaderRoute: typeof AuthenticatedSuperAdminDeliveryIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/super-admin/chat/$restaurantId': {
       id: '/_authenticated/super-admin/chat/$restaurantId'
       path: '/super-admin/chat/$restaurantId'
@@ -721,6 +741,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedSupportIndexRoute: typeof AuthenticatedSupportIndexRoute
   AuthenticatedTablesIndexRoute: typeof AuthenticatedTablesIndexRoute
   AuthenticatedSuperAdminChatRestaurantIdRoute: typeof AuthenticatedSuperAdminChatRestaurantIdRoute
+  AuthenticatedSuperAdminDeliveryIndexRoute: typeof AuthenticatedSuperAdminDeliveryIndexRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -742,6 +763,8 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedTablesIndexRoute: AuthenticatedTablesIndexRoute,
   AuthenticatedSuperAdminChatRestaurantIdRoute:
     AuthenticatedSuperAdminChatRestaurantIdRoute,
+  AuthenticatedSuperAdminDeliveryIndexRoute:
+    AuthenticatedSuperAdminDeliveryIndexRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
