@@ -1,5 +1,5 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
-import { ChatPage } from './ChatPage'
+import { ChatWorkspace } from '@/features/super-admin/components/ChatWorkspace'
 
 export const Route = createFileRoute('/_authenticated/super-admin/chat/$restaurantId')({
   beforeLoad: async () => {
@@ -17,5 +17,5 @@ export const Route = createFileRoute('/_authenticated/super-admin/chat/$restaura
       throw redirect({ to: '/dashboard' })
     }
   },
-  component: ChatPage,
+  component: () => <ChatWorkspace initialRestaurantId={Route.useParams().restaurantId} hideSidebar={true} />,
 })

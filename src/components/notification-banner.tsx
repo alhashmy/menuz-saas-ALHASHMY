@@ -1,11 +1,11 @@
-import { useState } from 'react'
-import { Bell, CheckCircle, AlertCircle, Mail, MessageSquare, ExternalLink, ChevronDown, ArrowRight } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Bell, CheckCircle, AlertCircle, Mail, MessageSquare, ExternalLink, ChevronDown, ArrowRight, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { useAuthStore } from '@/stores/auth-store'
-import { useNavigate } from '@tanstack/react-router'
+import { useNavigate, useLocation } from '@tanstack/react-router'
 import { cn } from '@/lib/utils'
 
 const TYPE_CONFIG = {
@@ -95,7 +95,22 @@ function NotificationCard({
 export function NotificationBanner() {
   const { notifications, unreadCount, markNotificationRead } = useAuthStore()
   const [isOpen, setIsOpen] = useState(false)
+  const [isDismissed, setIsDismissed] = useState(false)
+  const location = useLocation()
   const navigate = useNavigate()
+
+  // Hide completely on /support page
+  if (location.pathname === '/support') return null
+
+  // Check if dismissed in this session
+  useEffect(() => {
+    const dismissed = sessionStorage.getItem('notification-banner-dismissed')
+    if (dismissed === 'true') {
+      setIsDismissed(true)
+    }
+  }, [])
+
+  if (isDismissed) return null
 
   if (unreadCount === 0 && notifications.length === 0) return null
 
@@ -104,15 +119,20 @@ export function NotificationBanner() {
   const recentNotifications = notifications.filter((n) => new Date(n.created_at).getTime() >= twentyFourHoursAgo)
   const unreadNotifications = recentNotifications.filter((n) => !n.is_read)
 
+  const handleDismiss = () => {
+    setIsDismissed(true)
+    sessionStorage.setItem('notification-banner-dismissed', 'true')
+  }
+
   const handleNavigateToSupport = () => {
     setIsOpen(false)
     navigate({ to: '/support' })
   }
 
   return (
-    <div className='fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-96 z-50'>
+    <div className='fixed top-16 left-4 z-50 md:top-4 md:left-auto md:right-4'>
       <div className={cn(
-        'bg-slate-900 text-slate-50 border border-slate-700 shadow-2xl rounded-xl overflow-hidden transition-all duration-300',
+        'bg-slate-900 text-slate-50 border border-slate-700 shadow-2xl rounded-xl overflow-hidden transition-all duration-300 w-96',
         isOpen ? 'max-h-[500px]' : 'max-h-20'
       )}>
         {/* Header */}
@@ -126,15 +146,26 @@ export function NotificationBanner() {
               </p>
             </div>
           </div>
-          <Button
-            variant='ghost'
-            size='icon'
-            className='text-slate-300 hover:bg-slate-700/50'
-            onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen); }}
-            aria-label={isOpen ? 'إغلاق' : 'فتح'}
-          >
-            {isOpen ? <ChevronDown className='size-5' /> : <ChevronDown className='size-5 rotate-180' />}
-          </Button>
+          <div className='flex items-center gap-1'>
+            <Button
+              variant='ghost'
+              size='icon'
+              className='text-slate-300 hover:bg-slate-700/50'
+              onClick={(e) => { e.stopPropagation(); handleDismiss(); }}
+              aria-label='إخفاء الإشعارات مؤقتاً'
+            >
+              <X className='size-5' />
+            </Button>
+            <Button
+              variant='ghost'
+              size='icon'
+              className='text-slate-300 hover:bg-slate-700/50'
+              onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen); }}
+              aria-label={isOpen ? 'إغلاق' : 'فتح'}
+            >
+              {isOpen ? <ChevronDown className='size-5' /> : <ChevronDown className='size-5 rotate-180' />}
+            </Button>
+          </div>
         </div>
 
         {isOpen && (

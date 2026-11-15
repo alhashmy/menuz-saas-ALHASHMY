@@ -6,10 +6,8 @@ import { toast } from 'sonner'
 import { AlertCircle, Send, MessageSquare, Loader2, Check, ExternalLink, Bell } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import { Separator } from '@/components/ui/separator'
 import { cn } from '@/lib/utils'
 
 interface SupportMessage {
@@ -30,10 +28,10 @@ interface SupportMessage {
 }
 
 const TYPE_CONFIG = {
-  subscription_warning: { label: 'تنبيه اشتراك', icon: Bell, color: 'bg-amber-100 text-amber-800 border-amber-200' },
-  urgent: { label: 'عاجل', icon: AlertCircle, color: 'bg-rose-100 text-rose-800 border-rose-200' },
-  info: { label: 'معلومة', icon: MessageSquare, color: 'bg-blue-100 text-blue-800 border-blue-200' },
-  chat: { label: 'تواصل', icon: MessageSquare, color: 'bg-emerald-100 text-emerald-800 border-emerald-200' },
+  subscription_warning: { label: 'تنبيه اشتراك', icon: Bell, color: 'bg-amber-950/40 border-amber-500/40 text-amber-200' },
+  urgent: { label: 'عاجل', icon: AlertCircle, color: 'bg-rose-950/40 border-rose-500/40 text-rose-200' },
+  info: { label: 'معلومة', icon: MessageSquare, color: 'bg-blue-950/40 border-blue-500/40 text-blue-200' },
+  chat: { label: 'تواصل', icon: MessageSquare, color: 'bg-emerald-950/40 border-emerald-500/40 text-emerald-200' },
 } as const
 
 function throttle(fn: (text: string) => void, delay: number): (text: string) => void {
@@ -64,6 +62,20 @@ export function SupportPage() {
   const [newMessage, setNewMessage] = useState('')
   const [showAlert, setShowAlert] = useState(true)
   const broadcastChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
+  const messagesEndRef = useRef<HTMLDivElement>(null)
+  const scrollAreaRef = useRef<HTMLDivElement>(null)
+
+  // Scroll to bottom helper
+  const scrollToBottom = useCallback(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' })
+    }
+  }, [])
+
+  // Auto-scroll on new messages
+  useEffect(() => {
+    scrollToBottom()
+  }, [messages, scrollToBottom])
 
   // Initialize broadcast channel for live typing preview
   useEffect(() => {
@@ -207,6 +219,13 @@ export function SupportPage() {
     }
   }
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      handleSendMessage(e as unknown as React.FormEvent)
+    }
+  }
+
   const handleMessageChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value
     setNewMessage(value)
@@ -237,169 +256,185 @@ export function SupportPage() {
       </div>
     )
   }
+
   return (
-    <div className='space-y-6'>
-      <div>
-        <h1 className='text-3xl font-bold tracking-tight'>التواصل والدعم الفني</h1>
-        <p className='text-muted-foreground mt-1'>
-          تواصل مع إدارة المنصة، استعرض التنبيهات، وأرسل استفساراتك للدعم الفني.
-        </p>
+    <div className='h-[calc(100vh-8rem)] flex flex-col'>
+      {/* Header */}
+      <div className='shrink-0 px-4 py-4 border-b border-slate-800 bg-slate-950/50 backdrop-blur-sm'>
+        <div className='flex items-center justify-between'>
+          <div>
+            <h1 className='text-xl font-bold tracking-tight'>التواصل والدعم الفني</h1>
+            <p className='text-slate-400 text-sm mt-0.5'>
+              تواصل مع إدارة المنصة، استعرض التنبيهات، وأرسل استفساراتك للدعم الفني.
+            </p>
+          </div>
+        </div>
       </div>
 
+      {/* 24-hour Alert Bar */}
       {showAlert && (
-        <Card className='border-amber-200 bg-amber-50'>
-          <CardContent className='pt-6'>
-            <div className='flex items-start gap-3'>
-              <AlertCircle className='size-5 text-amber-600 mt-0.5 shrink-0' />
-              <div className='flex-1'>
-                <p className='font-medium text-amber-900'>
-                  تنبيه: تُحذف الرسائل تلقائياً من لوحة المطعم بعد مرور 24 ساعة لأغراض الخصوصية والتنظيم، بينما تبقى مؤرشفة لدى إدارة المنصة.
-                </p>
-                <Button
-                  variant='ghost'
-                  size='sm'
-                  className='mt-2 text-amber-700 hover:bg-amber-100'
-                  onClick={() => setShowAlert(false)}
-                >
-                  فهمت، إخفاء التنبيه
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <div className='shrink-0 px-4 py-2 border-b border-slate-800'>
+          <div className='flex items-center gap-3 bg-amber-950/30 border border-amber-500/30 text-amber-200 text-xs py-2 px-3 rounded-lg'>
+            <AlertCircle className='size-4 shrink-0' />
+            <span className='flex-1'>
+              تنبيه: تُحذف الرسائل تلقائياً من لوحة المطعم بعد مرور 24 ساعة لأغراض الخصوصية والتنظيم، بينما تبقى مؤرشفة لدى إدارة المنصة.
+            </span>
+            <Button
+              variant='ghost'
+              size='sm'
+              className='text-amber-300 hover:bg-amber-500/10 px-2 py-1'
+              onClick={() => setShowAlert(false)}
+            >
+              إخفاء
+            </Button>
+          </div>
+        </div>
       )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle className='flex items-center gap-2'>
-            <MessageSquare className='size-5' />
-            المحادثة
-          </CardTitle>
-        </CardHeader>
-        <CardContent className='pt-0'>
-          <ScrollArea className='max-h-[500px] space-y-4 pb-4'>
-            {isLoading ? (
-              <div className='flex items-center justify-center py-12'>
-                <Loader2 className='size-8 animate-spin text-primary' />
-              </div>
-            ) : messages.length === 0 ? (
-              <div className='text-center py-12 text-muted-foreground'>
-                <MessageSquare className='mx-auto size-12 mb-3 text-muted-foreground/50' />
-                <p className='text-lg font-medium'>لا توجد رسائل خلال الـ 24 ساعة الماضية</p>
-                <p className='text-sm'>ستظهر هنا رسائل الإدارة وردودك عند توفرها</p>
-              </div>
-            ) : (
-              messages.map((msg) => {
-                const config = TYPE_CONFIG[msg.type]
-                const Icon = config.icon
-                const isOwn = msg.sender_role === 'restaurant'
-                const senderDisplayName = isOwn ? 'أنت' : (msg.sender_name ?? msg.sender_email ?? 'الإدارة')
+      {/* Messages Area */}
+      <div className='flex-1 overflow-y-auto px-4 py-4 space-y-3 bg-slate-950' ref={scrollAreaRef}>
+        {isLoading ? (
+          <div className='flex items-center justify-center h-full'>
+            <Loader2 className='size-8 animate-spin text-primary' />
+          </div>
+        ) : messages.length === 0 ? (
+          <div className='flex flex-col items-center justify-center h-full text-slate-500'>
+            <MessageSquare className='size-12 mb-3 opacity-50' />
+            <p className='text-lg font-medium'>لا توجد رسائل خلال الـ 24 ساعة الماضية</p>
+            <p className='text-sm'>ستظهر هنا رسائل الإدارة وردودك عند توفرها</p>
+          </div>
+        ) : (
+          <>
+            {messages.map((msg) => {
+              const config = TYPE_CONFIG[msg.type]
+              const isOwn = msg.sender_role === 'restaurant'
+              const isSystemMessage = msg.type === 'subscription_warning' || msg.type === 'urgent'
+              const senderDisplayName = isOwn ? 'أنت' : (msg.sender_name ?? msg.sender_email ?? 'الإدارة')
 
+              // System messages (subscription_warning, urgent) - centered card
+              if (isSystemMessage) {
                 return (
-                  <div
-                    key={msg.id}
-                    className={cn(
-                      'flex gap-3 transition-colors',
-                      isOwn ? 'flex-row-reverse' : 'flex-row'
-                    )}
-                  >
-                    <div
-                      className={cn(
-                        'flex-shrink-0 size-10 rounded-full flex items-center justify-center',
-                        isOwn ? 'bg-primary text-primary-foreground' : config.color
-                      )}
-                    >
-                      <Icon className='size-5' />
-                    </div>
-                    <div
-                      className={cn(
-                        'flex-1 max-w-[70%] p-4 rounded-2xl',
-                        isOwn
-                          ? 'bg-primary text-primary-foreground rounded-br-md'
-                          : 'bg-muted rounded-bl-md'
-                      )}
-                    >
-                      <div className='flex items-center justify-between gap-2 mb-2'>
-                        <span className='font-medium text-sm'>{senderDisplayName}</span>
-                        <Badge variant='outline' className={cn('text-xs', config.color)}>
-                          {config.label}
-                        </Badge>
-                      </div>
-                      <p className='text-sm whitespace-pre-wrap'>{msg.message}</p>
-                      <div className='flex items-center justify-between mt-2'>
-                        <span className='text-xs opacity-60'>
-                          {new Date(msg.created_at).toLocaleString('ar-SA', {
-                            year: 'numeric',
-                            month: 'short',
-                            day: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}
-                        </span>
-                        {msg.contact_url && !isOwn && (
-                          <Button
-                            variant='ghost'
-                            size='sm'
-                            className='gap-1 text-xs'
-                            onClick={() => handleOpenContactUrl(msg.contact_url!)}
-                          >
-                            <ExternalLink className='size-3' />
-                            فتح قناة التواصل
-                          </Button>
-                        )}
-                        {msg.is_read && msg.sender_role === 'admin' && (
-                          <Badge variant='secondary' className='text-xs gap-1'>
-                            <Check className='size-3' />
-                            مقروء
-                          </Badge>
-                        )}
+                  <div key={msg.id} className='flex justify-center'>
+                    <div className={`${config.color} w-fit max-w-[85%] rounded-2xl px-5 py-4 shadow-sm border`}>
+                      <div className='flex items-start gap-3'>
+                        <config.icon className='size-5 shrink-0 mt-0.5' />
+                        <div className='flex-1 min-w-0'>
+                          <h4 className='font-medium text-sm'>{msg.title}</h4>
+                          <p className='mt-1 text-sm opacity-90 whitespace-pre-wrap'>{msg.message}</p>
+                          <div className='mt-3 flex items-center justify-between'>
+                            <span className='text-xs opacity-70'>
+                              {new Date(msg.created_at).toLocaleString('ar-SA', {
+                                year: 'numeric', month: 'short', day: 'numeric',
+                                hour: '2-digit', minute: '2-digit',
+                              })}
+                            </span>
+                            {msg.contact_url && (
+                              <Button
+                                variant='ghost'
+                                size='sm'
+                                className='gap-1 text-xs opacity-80 hover:opacity-100'
+                                onClick={() => handleOpenContactUrl(msg.contact_url!)}
+                              >
+                                <ExternalLink className='size-3' />
+                                فتح قناة التواصل
+                              </Button>
+                            )}
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
                 )
-              })
-            )}
-          </ScrollArea>
+              }
 
-          <Separator className='my-4' />
+              // Regular chat messages
+              return (
+                <div
+                  key={msg.id}
+                  className={cn(
+                    'flex gap-2.5 transition-colors animate-fade-in',
+                    isOwn ? 'flex-row-reverse' : 'flex-row'
+                  )}
+                >
+                  <div
+                    className={cn(
+                      'w-fit max-w-[75%] rounded-2xl px-4 py-2.5 shadow-sm',
+                      isOwn
+                        ? 'bg-blue-600 text-white rounded-br-sm'
+                        : 'bg-slate-800 text-slate-100 border border-slate-700 rounded-bl-sm'
+                    )}
+                  >
+                    {!isOwn && (
+                      <div className='text-xs font-medium text-slate-400 mb-1 px-1'>
+                        {senderDisplayName}
+                      </div>
+                    )}
+                    <p className='text-sm whitespace-pre-wrap'>{msg.message}</p>
+                    <div className='flex items-center justify-end gap-2 mt-1.5'>
+                      <span className={cn('text-xs opacity-60', isOwn ? 'text-blue-100' : 'text-slate-500')}>
+                        {new Date(msg.created_at).toLocaleString('ar-SA', {
+                          year: 'numeric', month: 'short', day: 'numeric',
+                          hour: '2-digit', minute: '2-digit',
+                        })}
+                      </span>
+                      {msg.contact_url && !isOwn && (
+                        <Button
+                          variant='ghost'
+                          size='sm'
+                          className={cn('gap-1 text-xs', isOwn ? 'text-blue-100 hover:bg-white/10' : 'text-slate-400 hover:bg-white/5')}
+                          onClick={() => handleOpenContactUrl(msg.contact_url!)}
+                        >
+                          <ExternalLink className='size-3' />
+                          فتح قناة التواصل
+                        </Button>
+                      )}
+                      {msg.is_read && isOwn && (
+                        <Badge variant='secondary' className='text-xs gap-1'>
+                          <Check className='size-3' />
+                          مقروء
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+            <div ref={messagesEndRef} />
+          </>
+        )}
+      </div>
 
-          <form onSubmit={handleSendMessage} className='space-y-3'>
-            <div>
-              <label htmlFor='support-message' className='sr-only'>
-                رسالتك للدعم الفني
-              </label>
-              <Textarea
-                id='support-message'
-                placeholder='اكتب رسالتك أو استفسارك هنا... سيتم إرساله مباشرة إلى فريق الدعم الفني.'
-                value={newMessage}
-                onChange={handleMessageChange}
-                rows={3}
-                className='resize-none'
-              />
-            </div>
+      {/* Input Area - Fixed at bottom */}
+      <div className='shrink-0 border-t border-slate-800 bg-slate-950/90 backdrop-blur-sm p-3'>
+        <form onSubmit={handleSendMessage} className='space-y-2'>
+          <div className='relative'>
+            <Textarea
+              id='support-message'
+              placeholder='اكتب رسالتك... (Enter للإرسال، Shift+Enter لسطر جديد)'
+              value={newMessage}
+              onChange={handleMessageChange}
+              onKeyDown={handleKeyDown}
+              rows={1}
+              className='resize-none bg-slate-900 border-slate-700 text-slate-100 placeholder-slate-500 focus:ring-2 focus:ring-primary/20 min-h-[48px] max-h-[120px] pr-12'
+            />
             <Button
               type='submit'
               disabled={!newMessage.trim() || isSending}
-              className='w-full justify-end gap-2'
+              className='absolute bottom-2 left-2 h-8 w-8 p-0'
+              aria-label='إرسال الرسالة'
             >
               {isSending ? (
-                <>
-                  <Loader2 className='size-4 animate-spin' />
-                  جاري الإرسال...
-                </>
+                <Loader2 className='size-4 animate-spin' />
               ) : (
-                <>
-                  <Send className='size-4' />
-                  إرسال رسالة للدعم الفني
-                </>
+                <Send className='size-4' />
               )}
             </Button>
-            <p className='text-xs text-muted-foreground text-center'>
-              سيتم إنشاء تذكرة دعم فني جديدة وسيتم الرد عليك في أقرب وقت ممكن.
-            </p>
-          </form>
-        </CardContent>
-      </Card>
+          </div>
+          <p className='text-xs text-slate-500 text-center'>
+            سيتم إنشاء تذكرة دعم فني جديدة وسيتم الرد عليك في أقرب وقت ممكن.
+          </p>
+        </form>
+      </div>
     </div>
   )
 }
